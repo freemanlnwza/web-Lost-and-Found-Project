@@ -1,19 +1,45 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       alert('รหัสผ่านไม่ตรงกัน!');
       return;
     }
-    // TODO: เพิ่ม logic การสมัคร (เช่น fetch API)
-    console.log('Register attempt:', { email, password });
-    alert('Register functionality to be implemented!');
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: username,
+          password: password,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert("สมัครไม่สำเร็จ: " + (errorData.detail || "Unknown error"));
+        return;
+      }
+
+      const data = await response.json();
+      console.log("Register success:", data);
+      alert("สมัครสมาชิกสำเร็จ!");
+      navigate("/login"); // ไปหน้า login หลังสมัครเสร็จ
+    } catch (error) {
+      console.error("Error:", error);
+      alert("เกิดข้อผิดพลาด: " + error.message);
+    }
   };
 
   return (
@@ -22,14 +48,14 @@ const Register = () => {
         <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">สมัครสมาชิก</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">อีเมล</label>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700">ชื่อผู้ใช้</label>
             <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="mt-1 w-full border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-500"
-              placeholder="example@email.com"
+              placeholder="username"
               required
             />
           </div>
