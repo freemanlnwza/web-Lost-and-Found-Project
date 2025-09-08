@@ -8,14 +8,9 @@ import Register from './Register.jsx';
 import Profile from "./Profile.jsx";
 
 function App() {
-  // เก็บสถานะการล็อกอิน
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  // ฟังก์ชันจำลองการล็อกเอาท์
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem("token"); // กรณีคุณใช้ token
-  };
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return !!localStorage.getItem("user"); // ✅ ตรวจสอบ login จาก localStorage
+  });
 
   return (
     <Router>
@@ -36,7 +31,6 @@ function App() {
                 <Link to="/found" className="text-white font-medium px-3 py-2 hover:text-amber-300">Found</Link>
                 <Link to="/support" className="text-white font-medium px-3 py-2 hover:text-amber-300">Support</Link>
 
-                {/* เช็คสถานะล็อกอิน */}
                 {!isAuthenticated ? (
                   <>
                     <Link to="/login" className="text-white font-medium px-3 py-2 hover:text-amber-300">Login</Link>
@@ -45,12 +39,7 @@ function App() {
                 ) : (
                   <>
                     <Link to="/profile" className="text-white font-medium px-3 py-2 hover:text-amber-300">Profile</Link>
-                    <button
-                      onClick={handleLogout}
-                      className="text-white font-medium px-3 py-2 hover:text-red-400"
-                    >
-                      Logout
-                    </button>
+                    <LogoutButton setIsAuthenticated={setIsAuthenticated} />
                   </>
                 )}
               </div>
@@ -65,7 +54,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/lost" element={<Lost />} />
           <Route path="/found" element={<Found />} />
-            <Route path="/profile" element={<Profile />} />   {/* ✅ เพิ่มตรงนี้ */}
+          <Route path="/profile" element={<Profile />} />
         </Routes>
 
         {/* Footer */}
@@ -89,5 +78,25 @@ function App() {
     </Router>
   );
 }
+
+// ✅ Component สำหรับ Logout
+const LogoutButton = ({ setIsAuthenticated }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");        // ลบข้อมูล login
+    setIsAuthenticated(false);              // อัปเดต state
+    navigate("/");                   // ไปหน้า home
+  };
+
+  return (
+    <button
+      onClick={handleLogout}
+      className="text-white font-medium px-3 py-2 hover:text-red-400"
+    >
+      Logout
+    </button>
+  );
+};
 
 export default App;

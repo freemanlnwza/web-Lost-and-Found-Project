@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const Login = () => {
+const Login = ({ setIsAuthenticated }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -9,7 +9,6 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // สร้าง FormData สำหรับ POST
     const formData = new FormData();
     formData.append('username', username);
     formData.append('password', password);
@@ -18,21 +17,19 @@ const Login = () => {
       const res = await fetch('http://localhost:8000/login', {
         method: 'POST',
         body: formData,
-        credentials: 'include', // ถ้าต้องการ cookies/session
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        // Login สำเร็จ
         alert(`ยินดีต้อนรับ ${data.username}!`);
-        // เก็บ user info หรือ token ใน localStorage/sessionStorage ถ้าต้องการ
         localStorage.setItem('user', JSON.stringify(data));
-        // ไปหน้า UploadPage หรือหน้าแรก
+        localStorage.setItem('token', data.access_token || "dummy");
+
+        setIsAuthenticated(true); // ✅ เปลี่ยน navbar
         navigate('/');
       } else {
-        // Login ล้มเหลว
-        alert(data.detail || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+        alert(data.detail || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       }
     } catch (error) {
       console.error('Login error:', error);
