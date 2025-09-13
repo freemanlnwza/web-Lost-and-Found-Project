@@ -1,80 +1,108 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Login = ({ setIsAuthenticated }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const formData = new FormData();
-    formData.append('username', username);
-    formData.append('password', password);
+  const formData = new FormData();
+  formData.append("username", username);
+  formData.append("password", password);
 
-    try {
-      const res = await fetch('http://localhost:8000/login', {
-        method: 'POST',
-        body: formData,
-      });
+  try {
+    const res = await fetch("http://localhost:8000/login", {
+      method: "POST",
+      body: formData,
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (res.ok) {
-        alert(`ยินดีต้อนรับ ${data.username}!`);
-        localStorage.setItem('user', JSON.stringify(data));
-        localStorage.setItem('token', data.access_token || "dummy");
+    if (res.ok) {
+      alert(`Welcome ${data.username}!`);
+      // ✅ เก็บ user ลง localStorage (ไม่ใช้ token)
+      localStorage.setItem("user", JSON.stringify(data));
 
-        setIsAuthenticated(true); // ✅ เปลี่ยน navbar
-        navigate('/');
-      } else {
-        alert(data.detail || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      setIsAuthenticated(true);
+      navigate("/");
+    } else {
+      alert(data.detail || "Invalid username or password.");
     }
-  };
+  } catch (error) {
+    console.error("Login error:", error);
+    alert("Failed to connect.");
+  }
+};
+
 
   return (
-    <main className="flex-grow flex items-center justify-center p-6 bg-gradient-to-br from-purple-100 via-pink-50 to-orange-100">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">เข้าสู่ระบบ</h1>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <main className="flex items-center justify-center  ">
+      <div className="w-full max-w-md bg-gray-900 backdrop-blur-lg rounded-2xl shadow-2xl p-10 space-y-8 text-white border border-gray-800">
+        
+        {/* Title */}
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white">Login</h1>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700">ชื่อผู้ใช้งาน</label>
+            <label htmlFor="username" className="block text-sm mb-2 text-gray-300">
+              Username
+            </label>
             <input
               type="text"
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 w-full border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-500"
-              placeholder="John"
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 placeholder-gray-500 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
+              placeholder="Username"
               required
             />
           </div>
+
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">รหัสผ่าน</label>
+            <label htmlFor="password" className="block text-sm mb-2 text-gray-300">
+              Password
+            </label>
             <input
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-500"
-              placeholder="••••••••"
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 placeholder-gray-500 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
+              placeholder="Password"
               required
             />
           </div>
+
+          <div className="flex items-center justify-between text-sm">
+            <label className="flex items-center gap-2 text-gray-400">
+              <input type="checkbox" className="w-4 h-4 text-blue-500 border-gray-600 bg-gray-800" />
+              Remember me
+            </label>
+            <a href="#" className="text-blue-400 hover:underline">
+              Forgot password?
+            </a>
+          </div>
+
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white font-bold py-3 rounded-xl transition-all"
+            className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-bluet-700 transition-all"
           >
-            เข้าสู่ระบบ
+            Login
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
-          ยังไม่มีบัญชี? <a href="/register" className="text-pink-500 hover:underline">สมัครสมาชิก</a>
+
+        {/* Register link */}
+        <p className="text-center text-sm text-gray-400">
+          Don’t have an account?{" "}
+          <a href="/register" className="text-blue-400 hover:underline">
+            Register
+          </a>
         </p>
       </div>
     </main>
