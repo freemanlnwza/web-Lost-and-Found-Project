@@ -28,14 +28,14 @@ const Found = () => {
   if (loading) {
     return (
       <main className="flex-grow flex items-center justify-center p-6">
-        <p className="text-gray-700 text-lg">กำลังโหลดรายการสิ่งของที่เจอ...</p>
+        <p className="text-gray-700 text-lg">Loading found items...</p>
       </main>
     );
   }
 
   return (
-    <main className="flex-grow p-6 bg-gradient-to-br from-purple-100 via-pink-50 to-orange-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">📋 สิ่งของที่เจอ</h2>
+    <main className="flex-grow p-6 ">
+      <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">📋 Found Items</h2>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
         {items.map((item) => (
@@ -55,18 +55,18 @@ const Found = () => {
                 </span>
                 <h3 className="text-lg font-semibold text-gray-800">{item.title}</h3>
               </div>
-              <p className="text-gray-600 text-sm">หมวดหมู่: {item.category}</p>
-              <p className="text-gray-500 text-xs mt-2">ผู้ใช้งาน ID: {item.user_id}</p>
+              <p className="text-gray-600 text-sm">Category: {item.category}</p>
+              <p className="text-gray-500 text-xs mt-2">USer ID: {item.user_id}</p>
               <button
                 onClick={() => handleDetailsClick(item)}
                 className="mt-4 w-full bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white py-2 rounded-xl font-medium transition-all"
               >
-                รายละเอียดเพิ่มเติม
+                Additional Details
               </button>
               {selectedItem?.id === item.id && (
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
                   {/* แสดงรายละเอียดเพิ่มเติม ถ้ามี */}
-                  ID ของผู้โพสต์: {item.user_id}
+                  Poster's ID: {item.user_id}
                 </div>
               )}
             </div>

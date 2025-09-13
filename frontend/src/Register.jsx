@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Register = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert('รหัสผ่านไม่ตรงกัน!');
+      alert("Passwords do not match!");
       return;
     }
 
@@ -28,70 +28,89 @@ const Register = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        alert("สมัครไม่สำเร็จ: " + (errorData.detail || "Unknown error"));
+        alert("Registration failed: " + (errorData.detail || "Unknown error"));
         return;
       }
 
       const data = await response.json();
-      console.log("Register success:", data);
-      alert("สมัครสมาชิกสำเร็จ!");
-      navigate("/login"); // ไปหน้า login หลังสมัครเสร็จ
+      alert("Registration successful!");
+      navigate("/login");
     } catch (error) {
       console.error("Error:", error);
-      alert("เกิดข้อผิดพลาด: " + error.message);
+      alert("Error: " + error.message);
     }
   };
 
   return (
-    <main className="flex-grow flex items-center justify-center p-6 bg-gradient-to-br from-purple-100 via-pink-50 to-orange-100">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">สมัครสมาชิก</h1>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <main className="flex items-center justify-center ">
+      <div className="w-full max-w-md bg-gray-900 backdrop-blur-lg rounded-2xl shadow-2xl p-10 space-y-8 text-white border border-gray-800">
+        
+        {/* Title */}
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white">Register</h1>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700">ชื่อผู้ใช้</label>
+            <label htmlFor="username" className="block text-sm mb-2 text-gray-300">
+              Username
+            </label>
             <input
               type="text"
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 w-full border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-500"
-              placeholder="username"
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 placeholder-gray-500 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
+              placeholder="Username"
               required
             />
           </div>
+
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">รหัสผ่าน</label>
+            <label htmlFor="password" className="block text-sm mb-2 text-gray-300">
+              Password
+            </label>
             <input
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-500"
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 placeholder-gray-500 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
               placeholder="••••••••"
               required
             />
           </div>
+
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">ยืนยันรหัสผ่าน</label>
+            <label htmlFor="confirmPassword" className="block text-sm mb-2 text-gray-300">
+              Confirm Password
+            </label>
             <input
               type="password"
               id="confirmPassword"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 w-full border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-pink-500"
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 placeholder-gray-500 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
               placeholder="••••••••"
               required
             />
           </div>
+
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white font-bold py-3 rounded-xl transition-all"
+            className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all"
           >
-            สมัครสมาชิก
+            Register
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
-          มีบัญชีอยู่แล้ว? <a href="/login" className="text-pink-500 hover:underline">เข้าสู่ระบบ</a>
+
+        {/* Login link */}
+        <p className="text-center text-sm text-gray-400">
+          Have an account?{" "}
+          <a href="/login" className="text-blue-400 hover:underline">
+            Log In
+          </a>
         </p>
       </div>
     </main>
