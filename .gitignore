@@ -37,6 +37,7 @@ backend/uploads/          # User uploaded files
 backend/__pycache__/       # Python cache
 backend/**/*.pyc
 backend/*.pyc
+backend/*.pt
 backend/logs/
 backend/*.log
 *.pyc
