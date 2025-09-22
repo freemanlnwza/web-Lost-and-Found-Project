@@ -19,7 +19,7 @@ class UserOut(BaseModel):
     username: str
 
     class Config:
-        from_attributes = True  # <-- ต้องมี
+        from_attributes = True
 
 # -------- Item --------
 class ItemCreate(BaseModel):
@@ -32,9 +32,11 @@ class ItemOut(BaseModel):
     title: str
     type: str
     category: str
-    image_data: Optional[str]
+    image_data: Optional[str]            # ภาพต้นฉบับ
+    boxed_image_data: Optional[str]      # ภาพที่ตีกรอบ
     image_filename: str
-    user: Optional[UserOut] = None  # <-- เปลี่ยนจาก user_id
+    user_id: int
+    username: str 
 
     class Config:
         from_attributes = True

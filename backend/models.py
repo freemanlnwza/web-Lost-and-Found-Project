@@ -9,6 +9,10 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
 
+    # ความสัมพันธ์กับ Item
+    items = relationship("Item", back_populates="user")
+
+
 class Item(Base):
     __tablename__ = "items"
 
@@ -16,8 +20,17 @@ class Item(Base):
     title = Column(String, nullable=False)
     type = Column(String, nullable=False)
     category = Column(String, nullable=False)
+
+    # ภาพต้นฉบับ
     image_data = Column(LargeBinary, nullable=False)
     image_filename = Column(String, nullable=False)
     image_content_type = Column(String, nullable=False)
+
+    # ภาพตีกรอบ
+    boxed_image_data = Column(LargeBinary, nullable=True)
+
+    # foreign key ไปยัง user
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    user = relationship("User")  # <-- ต้องมี relationship
+
+    # ความสัมพันธ์กับ User
+    user = relationship("User", back_populates="items")
