@@ -31,7 +31,7 @@ const Lost = () => {
   }
 
   return (
-    <main className="flex flex-col  bg-gray-900 text-white pt-10 pb-24 px-6">
+    <main className="flex flex-col bg-gray-900 text-white pt-10 pb-24 px-6">
       <div className="flex-grow max-w-6xl mx-auto w-full">
         <h1 className="text-3xl font-bold text-center mb-10">
           📋 Reported Lost Items
@@ -50,7 +50,7 @@ const Lost = () => {
                            hover:shadow-2xl hover:scale-105 transition duration-300"
               >
                 <img
-                  src={`data:${item.image_content_type};base64,${item.image_data}`}
+                  src={item.image_data} // ใช้ตรง ๆ จาก backend
                   alt={item.title}
                   className="w-full h-56 object-cover"
                 />
@@ -63,7 +63,7 @@ const Lost = () => {
                   </div>
                   <p className="text-gray-400 mb-2">Category: {item.category}</p>
                   <p className="text-gray-300 font-medium mb-4">
-                    User: {item.user.username}
+                    User: {item.username}
                   </p>
                   <div className="mt-auto">
                     <button
