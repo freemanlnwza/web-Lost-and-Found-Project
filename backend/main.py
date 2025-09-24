@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from database import SessionLocal, engine, Base, get_db
 import crud
 import models
@@ -10,8 +11,7 @@ from ultralytics import YOLO
 from PIL import Image
 import io
 
-yolo_model = YOLO("best.pt")  # ใช้รุ่นเล็กเพื่อทดลองเร็ว
-# สร้างตารางถ้ายังไม่มี
+yolo_model = YOLO("best.pt")  # ใช้โมเดล YOLO
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Lost & Found API")
@@ -21,14 +21,56 @@ app = FastAPI(title="Lost & Found API")
 # ---------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # เปลี่ยนเป็น frontend port ของคุณ
+    allow_origins=["http://localhost:5173"],  # frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# --------- Schema สำหรับ base64 ----------
+class ImageData(BaseModel):
+    image_base64: str
+
+# --------- Endpoint Detect (รองรับ 2 แบบ) ----------
+@app.post("/detect")
+async def detect_object(
+    request: Request,
+    image: UploadFile = File(None)  # อนุญาตให้เป็น None ถ้าไม่ได้ส่งไฟล์
+):
+    try:
+        pil_image = None
+
+        if image:  
+            # 🟢 แบบที่ 1: UploadFile (FormData)
+            image_bytes = await image.read()
+            pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+        else:
+            # 🟢 แบบที่ 2: JSON base64
+            body = await request.json()
+            if "image_base64" not in body:
+                raise HTTPException(status_code=400, detail="No image provided")
+
+            image_bytes = base64.b64decode(body["image_base64"].split(",")[-1])
+            pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+        # ✅ Run YOLO detect
+        results = yolo_model.predict(pil_image)
+        boxed_image = results[0].plot()
+
+        # ✅ แปลงกลับ base64
+        boxed_image_bytes = io.BytesIO()
+        Image.fromarray(boxed_image).save(boxed_image_bytes, format="JPEG")
+        encoded_image = base64.b64encode(boxed_image_bytes.getvalue()).decode()
+
+        return {"boxed_image_data": f"data:image/jpeg;base64,{encoded_image}"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ---------------------------
-# User endpoints
+# Register User
 # ---------------------------
 @app.post("/register", response_model=schemas.UserOut)
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -37,6 +79,10 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Username นี้ถูกใช้ไปแล้ว")
     return crud.create_user(db=db, user=user)
 
+
+# ---------------------------
+# Login User
+# ---------------------------
 @app.post("/login", response_model=schemas.UserOut)
 def login_user(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = crud.authenticate_user(db, username, password)
@@ -46,7 +92,7 @@ def login_user(username: str = Form(...), password: str = Form(...), db: Session
 
 
 # ---------------------------
-# Upload item
+# Upload Item
 # ---------------------------
 @app.post("/upload", response_model=schemas.ItemOut)
 def upload_item(
@@ -57,23 +103,20 @@ def upload_item(
     user_id: int = Form(...),
     db: Session = Depends(get_db)
 ):
-    # อ่านไฟล์ต้นฉบับ
     image_bytes = image.file.read()
-    image.file.seek(0)  # rewind pointer ก่อนส่งไป crud
+    image.file.seek(0)
 
     pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
-    # ตรวจจับและวาดกรอบ
+    # ตรวจจับและตีกรอบ
     results = yolo_model.predict(pil_image)
     boxed_image = results[0].plot()
     boxed_image_bytes = io.BytesIO()
     Image.fromarray(boxed_image).save(boxed_image_bytes, format="JPEG")
     boxed_image_bytes = boxed_image_bytes.getvalue()
 
-    # สร้าง schema
     item_in = schemas.ItemCreate(title=title, type=type, category=category)
 
-    # บันทึก DB
     item = crud.create_item(
         db=db,
         item=item_in,
@@ -91,8 +134,9 @@ def upload_item(
         boxed_image_data=f"data:{item.image_content_type};base64,{base64.b64encode(item.boxed_image_data).decode()}" if item.boxed_image_data else None,
         image_filename=item.image_filename,
         user_id=item.user_id,
-        username=item.user.username if item.user else None   # ✅ ส่ง username
+        username=item.user.username if item.user else None
     )
+
 
 # ---------------------------
 # Get lost/found items
@@ -110,9 +154,10 @@ def get_lost_items(db: Session = Depends(get_db)):
             boxed_image_data=f"data:{i.image_content_type};base64,{base64.b64encode(i.boxed_image_data).decode()}" if i.boxed_image_data else None,
             image_filename=i.image_filename,
             user_id=i.user_id,
-            username=i.user.username if i.user else None 
+            username=i.user.username if i.user else None
         ) for i in items
     ]
+
 
 @app.get("/api/found-items", response_model=list[schemas.ItemOut])
 def get_found_items(db: Session = Depends(get_db)):
