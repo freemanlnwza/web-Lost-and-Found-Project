@@ -1,45 +1,72 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// ✅ Popup component
+const Popup = ({ message, onClose }) => {
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      <div className="bg-gray-900 p-6 rounded-2xl shadow-2xl w-80 text-center border border-gray-700">
+        <p className="text-white mb-4">{message}</p>
+        <button
+          onClick={onClose}
+          className="w-full py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all"
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Login = ({ setIsAuthenticated }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [popupMessage, setPopupMessage] = useState(""); // ข้อความ popup
+  const [showPopup, setShowPopup] = useState(false); // toggle popup
+
   const navigate = useNavigate();
 
+  const showMessage = (msg) => {
+    setPopupMessage(msg);
+    setShowPopup(true);
+  };
+
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const formData = new FormData();
-  formData.append("username", username);
-  formData.append("password", password);
+    const formData = new FormData();
+    formData.append("username", username);
+    formData.append("password", password);
 
-  try {
-    const res = await fetch("http://localhost:8000/login", {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const res = await fetch("http://localhost:8000/login", {
+        method: "POST",
+        body: formData,
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (res.ok) {
-      alert(`Welcome ${data.username}!`);
-      // ✅ เก็บ user ลง localStorage (ไม่ใช้ token)
-      localStorage.setItem("user", JSON.stringify(data));
+      if (res.ok) {
+        showMessage(`Welcome ${data.username}!`);
+        // ✅ เก็บ user ลง localStorage (ไม่ใช้ token)
+        localStorage.setItem("user", JSON.stringify(data));
+        setIsAuthenticated(true);
 
-      setIsAuthenticated(true);
-      navigate("/");
-    } else {
-      alert(data.detail || "Invalid username or password.");
+        // รอ popup ปิดก่อน navigate
+        setTimeout(() => {
+          navigate("/");
+        }, 1500);
+      } else {
+        showMessage(data.detail || "Invalid username or password.");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      showMessage("Failed to connect.");
     }
-  } catch (error) {
-    console.error("Login error:", error);
-    alert("Failed to connect.");
-  }
-};
-
+  };
 
   return (
-    <main className="flex items-center justify-center  ">
+    <main className="flex items-center justify-center">
       <div className="w-full max-w-md bg-gray-900 backdrop-blur-lg rounded-2xl shadow-2xl p-10 space-y-8 text-white border border-gray-800">
         
         {/* Title */}
@@ -91,7 +118,7 @@ const Login = ({ setIsAuthenticated }) => {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-bluet-700 transition-all"
+            className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all"
           >
             Login
           </button>
@@ -105,6 +132,11 @@ const Login = ({ setIsAuthenticated }) => {
           </a>
         </p>
       </div>
+
+      {/* Popup */}
+      {showPopup && (
+        <Popup message={popupMessage} onClose={() => setShowPopup(false)} />
+      )}
     </main>
   );
 };

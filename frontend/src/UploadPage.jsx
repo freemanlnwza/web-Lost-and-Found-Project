@@ -10,6 +10,11 @@ const UploadPage = () => {
   const [uploadedItem, setUploadedItem] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Popup states
+  const [showPopup, setShowPopup] = useState(false); // สำหรับ upload success
+  const [popupMessage, setPopupMessage] = useState(""); // สำหรับข้อความทั่วไป
+  const [showMessagePopup, setShowMessagePopup] = useState(false);
+
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -23,7 +28,8 @@ const UploadPage = () => {
 
   const requireLogin = () => {
     if (!isAuthenticated) {
-      alert("⚠ Login required to continue.");
+      setPopupMessage("⚠ Login required to continue.");
+      setShowMessagePopup(true);
       navigate("/login");
       return false;
     }
@@ -48,7 +54,8 @@ const UploadPage = () => {
   const submitForm = async () => {
     if (!requireLogin()) return;
     if (!uploadedImage || !message || !selectedType || !category) {
-      alert("Please complete all fields and select an item category.");
+      setPopupMessage("Please complete all fields and select an item category.");
+      setShowMessagePopup(true);
       return;
     }
 
@@ -70,12 +77,14 @@ const UploadPage = () => {
 
       if (res.ok) {
         setUploadedItem(data);
-        alert("Upload successful!");
+        setShowPopup(true); // แสดง popup upload success
       } else {
-        alert(data.detail || "Error occurred.");
+        setPopupMessage(data.detail || "Error occurred.");
+        setShowMessagePopup(true);
       }
     } catch (error) {
-      alert("A connection error occurred.");
+      setPopupMessage("A connection error occurred.");
+      setShowMessagePopup(true);
     }
   };
 
@@ -89,7 +98,8 @@ const UploadPage = () => {
         videoRef.current.srcObject = stream;
       }
     } catch (err) {
-      alert("Unable to access camera.");
+      setPopupMessage("Unable to access camera.");
+      setShowMessagePopup(true);
       console.error(err);
     }
   };
@@ -122,7 +132,9 @@ const UploadPage = () => {
   return (
     <main className="flex items-center justify-center">
       <div className="w-full max-w-2xl bg-gray-900 backdrop-blur-lg rounded-2xl shadow-2xl p-6 space-y-6 text-white border border-gray-800">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center">Upload Image & Message</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-center">
+          Upload Image & Message
+        </h1>
 
         {!isAuthenticated && (
           <p className="text-red-400 text-center">⚠ Please log in to continue.</p>
@@ -197,7 +209,11 @@ const UploadPage = () => {
         {/* Camera Preview */}
         {isCameraOpen && (
           <div className="text-center mt-2">
-            <video ref={videoRef} autoPlay className="mx-auto rounded-lg w-64 h-48 bg-black" />
+            <video
+              ref={videoRef}
+              autoPlay
+              className="mx-auto rounded-lg w-64 h-48 bg-black"
+            />
             <div className="mt-2 flex justify-center gap-2">
               <button
                 type="button"
@@ -209,7 +225,6 @@ const UploadPage = () => {
               <button
                 type="button"
                 onClick={() => {
-                  // ปิดกล้องและกลับไปกล่อง upload
                   const stream = videoRef.current?.srcObject;
                   if (stream) {
                     const tracks = stream.getTracks();
@@ -226,6 +241,7 @@ const UploadPage = () => {
             <canvas ref={canvasRef} className="hidden" />
           </div>
         )}
+
         {/* Message */}
         <textarea
           placeholder="Please describe the lost item..."
@@ -281,37 +297,52 @@ const UploadPage = () => {
           Confirm
         </button>
 
-        {/* Uploaded result */}
-        {uploadedItem && (
-          <div className="mt-6 space-y-4 text-center">
-            <h2 className="text-xl font-bold">Uploaded Item</h2>
-            <p>Title: {uploadedItem.title}</p>
-            <p>Type: {uploadedItem.type}</p>
-            <p>Category: {uploadedItem.category}</p>
+        {/* Upload success popup */}
+        {showPopup && uploadedItem && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full text-center relative">
+              <button
+                onClick={() => setShowPopup(false)}
+                className="absolute top-2 right-2 text-gray-500 hover:text-black"
+              >
+                ✕
+              </button>
+              <h2 className="text-xl font-bold text-black">✅ Upload Successful!</h2>
+              <p className="text-gray-700">Your item has been uploaded successfully.</p>
+              <div className="mt-4">
+                <p className="font-semibold text-black">Title: {uploadedItem.title}</p>
+                <p className="text-black">Type: {uploadedItem.type}</p>
+                <p className="text-black">Category: {uploadedItem.category}</p>
+              </div>
+              <div className="flex justify-center gap-4 mt-4">
+               
+                
+                {uploadedItem.boxed_image_data && (
+                  <div>
+                    <p className="text-sm text-black">Detected</p>
+                    <img
+                      src={uploadedItem.boxed_image_data}
+                      alt="Detected"
+                      className="w-28 h-28 object-cover rounded-md"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
-            <div className="flex justify-center gap-4 mt-2">
-              {/* Original image */}
-              {uploadedItem.image_data && (
-                <div>
-                  <p className="text-sm">Original</p>
-                  <img
-                    src={uploadedItem.image_data}
-                    alt="Original"
-                    className="w-28 h-28 object-cover rounded-md"
-                  />
-                </div>
-              )}
-              {/* Boxed image */}
-              {uploadedItem.boxed_image_data && (
-                <div>
-                  <p className="text-sm">Detected</p>
-                  <img
-                    src={uploadedItem.boxed_image_data}
-                    alt="Detected"
-                    className="w-28 h-28 object-cover rounded-md"
-                  />
-                </div>
-              )}
+        {/* General message popup */}
+        {showMessagePopup && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center relative">
+              <button
+                onClick={() => setShowMessagePopup(false)}
+                className="absolute top-2 right-2 text-gray-500 hover:text-black"
+              >
+                ✕
+              </button>
+              <p className="text-black">{popupMessage}</p>
             </div>
           </div>
         )}

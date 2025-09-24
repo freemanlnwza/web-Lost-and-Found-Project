@@ -1,16 +1,41 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const Popup = ({ message, onClose }) => {
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      <div className="bg-gray-900 p-6 rounded-2xl shadow-2xl w-80 text-center border border-gray-700">
+        <p className="text-white mb-4">{message}</p>
+        <button
+          onClick={onClose}
+          className="w-full py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all"
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Register = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [popupMessage, setPopupMessage] = useState(""); // ข้อความ popup
+  const [showPopup, setShowPopup] = useState(false); // toggle popup
+
   const navigate = useNavigate();
+
+  const showMessage = (msg) => {
+    setPopupMessage(msg);
+    setShowPopup(true);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+      showMessage("Passwords do not match!");
       return;
     }
 
@@ -28,23 +53,25 @@ const Register = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        alert("Registration failed: " + (errorData.detail || "Unknown error"));
+        showMessage("Registration failed: " + (errorData.detail || "Unknown error"));
         return;
       }
 
-      const data = await response.json();
-      alert("Registration successful!");
-      navigate("/login");
+      await response.json();
+      showMessage("Registration successful!");
+      // หลังจากปิด popup แล้วไปหน้า login
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
     } catch (error) {
       console.error("Error:", error);
-      alert("Error: " + error.message);
+      showMessage("Error: " + error.message);
     }
   };
 
   return (
-    <main className="flex items-center justify-center ">
+    <main className="flex items-center justify-center">
       <div className="w-full max-w-md bg-gray-900 backdrop-blur-lg rounded-2xl shadow-2xl p-10 space-y-8 text-white border border-gray-800">
-        
         {/* Title */}
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white">Register</h1>
@@ -113,6 +140,11 @@ const Register = () => {
           </a>
         </p>
       </div>
+
+      {/* Popup */}
+      {showPopup && (
+        <Popup message={popupMessage} onClose={() => setShowPopup(false)} />
+      )}
     </main>
   );
 };
