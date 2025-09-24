@@ -11,10 +11,11 @@ const UploadPage = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Popup states
-  const [showPopup, setShowPopup] = useState(false); // สำหรับ upload success
-  const [popupMessage, setPopupMessage] = useState(""); // สำหรับข้อความทั่วไป
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState("");
   const [showMessagePopup, setShowMessagePopup] = useState(false);
 
+  // Camera states
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -77,7 +78,7 @@ const UploadPage = () => {
 
       if (res.ok) {
         setUploadedItem(data);
-        setShowPopup(true); // แสดง popup upload success
+        setShowPopup(true);
       } else {
         setPopupMessage(data.detail || "Error occurred.");
         setShowMessagePopup(true);
@@ -88,7 +89,7 @@ const UploadPage = () => {
     }
   };
 
-  // ================= Camera functions =================
+  // ================= Camera + Object Detection =================
   const openCamera = async () => {
     if (!requireLogin()) return;
     setIsCameraOpen(true);
@@ -96,6 +97,9 @@ const UploadPage = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play(); // ✅ ให้ video เล่นแน่นอน
+        };
       }
     } catch (err) {
       setPopupMessage("Unable to access camera.");
@@ -104,30 +108,64 @@ const UploadPage = () => {
     }
   };
 
-  const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    const width = videoRef.current.videoWidth;
-    const height = videoRef.current.videoHeight;
-    canvasRef.current.width = width;
-    canvasRef.current.height = height;
-    const ctx = canvasRef.current.getContext("2d");
-    ctx.drawImage(videoRef.current, 0, 0, width, height);
-    canvasRef.current.toBlob((blob) => {
-      const file = new File([blob], "camera_capture.png", { type: "image/png" });
-      setUploadedImage(file);
-      const url = URL.createObjectURL(blob);
-      setPreview(url);
-      setIsCameraOpen(false);
-
-      // Stop camera stream
-      const stream = videoRef.current.srcObject;
-      if (stream) {
-        const tracks = stream.getTracks();
-        tracks.forEach((track) => track.stop());
-      }
-      videoRef.current.srcObject = null;
-    });
+  const stopCamera = () => {
+    const stream = videoRef.current?.srcObject;
+    if (stream) {
+      const tracks = stream.getTracks();
+      tracks.forEach((track) => track.stop());
+    }
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setIsCameraOpen(false);
   };
+
+  const detectObjects = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const video = videoRef.current;
+
+    // ✅ กันไม่ให้ค่ากลายเป็น 0
+    if (video.videoWidth === 0 || video.videoHeight === 0) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const formData = new FormData();
+      formData.append("image", blob, "frame.jpg");
+
+      try {
+        const res = await fetch("http://localhost:8000/detect", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+
+        if (data.boxed_image_data) {
+          const img = new Image();
+          img.src = data.boxed_image_data;
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          };
+        }
+      } catch (err) {
+        console.error("Detection error:", err);
+      }
+    }, "image/jpeg");
+  };
+  // ================= useEffect สำหรับ loop detectObjects =================
+
+
+  useEffect(() => {
+    let interval;
+    if (isCameraOpen) {
+      interval = setInterval(detectObjects, 50);
+    }
+    return () => clearInterval(interval);
+  }, [isCameraOpen]);
 
   return (
     <main className="flex items-center justify-center">
@@ -171,7 +209,27 @@ const UploadPage = () => {
           </div>
         )}
 
-        {/* Upload image box */}
+        {/* Camera Preview + Detection */}
+        {isCameraOpen && (
+          <div className="text-center mt-2">
+            <video ref={videoRef} autoPlay muted playsInline className="hidden" />
+            <canvas
+              ref={canvasRef}
+              className="mx-auto rounded-lg w-64 h-48 bg-black"
+            />
+            <div className="mt-2 flex justify-center gap-2">
+              <button
+                type="button"
+                onClick={stopCamera}
+                className="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-700"
+              >
+                🔙 Back
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Upload box (ซ่อนเมื่อเปิดกล้อง) */}
         {!isCameraOpen && (
           <>
             <input
@@ -204,42 +262,6 @@ const UploadPage = () => {
               )}
             </div>
           </>
-        )}
-
-        {/* Camera Preview */}
-        {isCameraOpen && (
-          <div className="text-center mt-2">
-            <video
-              ref={videoRef}
-              autoPlay
-              className="mx-auto rounded-lg w-64 h-48 bg-black"
-            />
-            <div className="mt-2 flex justify-center gap-2">
-              <button
-                type="button"
-                onClick={capturePhoto}
-                className="py-2 px-4 rounded-lg bg-red-600 hover:bg-red-700"
-              >
-                📸 Capture
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const stream = videoRef.current?.srcObject;
-                  if (stream) {
-                    const tracks = stream.getTracks();
-                    tracks.forEach((track) => track.stop());
-                  }
-                  if (videoRef.current) videoRef.current.srcObject = null;
-                  setIsCameraOpen(false);
-                }}
-                className="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-700"
-              >
-                🔙 Back
-              </button>
-            </div>
-            <canvas ref={canvasRef} className="hidden" />
-          </div>
         )}
 
         {/* Message */}
@@ -297,7 +319,7 @@ const UploadPage = () => {
           Confirm
         </button>
 
-        {/* Upload success popup */}
+        {/* Popups */}
         {showPopup && uploadedItem && (
           <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
             <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full text-center relative">
@@ -308,15 +330,17 @@ const UploadPage = () => {
                 ✕
               </button>
               <h2 className="text-xl font-bold text-black">✅ Upload Successful!</h2>
-              <p className="text-gray-700">Your item has been uploaded successfully.</p>
+              <p className="text-gray-700">
+                Your item has been uploaded successfully.
+              </p>
               <div className="mt-4">
-                <p className="font-semibold text-black">Title: {uploadedItem.title}</p>
+                <p className="font-semibold text-black">
+                  Title: {uploadedItem.title}
+                </p>
                 <p className="text-black">Type: {uploadedItem.type}</p>
                 <p className="text-black">Category: {uploadedItem.category}</p>
               </div>
               <div className="flex justify-center gap-4 mt-4">
-               
-                
                 {uploadedItem.boxed_image_data && (
                   <div>
                     <p className="text-sm text-black">Detected</p>
@@ -332,7 +356,6 @@ const UploadPage = () => {
           </div>
         )}
 
-        {/* General message popup */}
         {showMessagePopup && (
           <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
             <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center relative">
