@@ -71,7 +71,7 @@ const Register = () => {
 
   return (
     <main className="flex items-center justify-center">
-      <div className="w-full max-w-md bg-gray-900 backdrop-blur-lg rounded-2xl shadow-2xl p-10 space-y-8 text-white border border-gray-800">
+      <div className="w-full max-w-md bg-gray-900 backdrop-blur-lg rounded-2xl shadow-2xl p-10 space-y-6 text-white border border-gray-800">
         {/* Title */}
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white">Register</h1>
