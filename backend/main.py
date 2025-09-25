@@ -32,42 +32,20 @@ class ImageData(BaseModel):
     image_base64: str
 
 # --------- Endpoint Detect (รองรับ 2 แบบ) ----------
-@app.post("/detect")
-async def detect_object(
-    request: Request,
-    image: UploadFile = File(None)  # อนุญาตให้เป็น None ถ้าไม่ได้ส่งไฟล์
-):
-    try:
-        pil_image = None
+@app.post("/detect-frame")
+async def detect_frame(image: UploadFile = File(...)):
+    image_bytes = await image.read()
+    pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
-        if image:  
-            # 🟢 แบบที่ 1: UploadFile (FormData)
-            image_bytes = await image.read()
-            pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    results = yolo_model.predict(pil_image)
+    boxed_image = results[0].plot()
 
-        else:
-            # 🟢 แบบที่ 2: JSON base64
-            body = await request.json()
-            if "image_base64" not in body:
-                raise HTTPException(status_code=400, detail="No image provided")
+    boxed_bytes = io.BytesIO()
+    Image.fromarray(boxed_image).save(boxed_bytes, format="JPEG")
+    boxed_bytes = boxed_bytes.getvalue()
 
-            image_bytes = base64.b64decode(body["image_base64"].split(",")[-1])
-            pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-
-        # ✅ Run YOLO detect
-        results = yolo_model.predict(pil_image)
-        boxed_image = results[0].plot()
-
-        # ✅ แปลงกลับ base64
-        boxed_image_bytes = io.BytesIO()
-        Image.fromarray(boxed_image).save(boxed_image_bytes, format="JPEG")
-        encoded_image = base64.b64encode(boxed_image_bytes.getvalue()).decode()
-
-        return {"boxed_image_data": f"data:image/jpeg;base64,{encoded_image}"}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+    boxed_base64 = f"data:image/jpeg;base64,{base64.b64encode(boxed_bytes).decode()}"
+    return {"boxed_image": boxed_base64}
 
 # ---------------------------
 # Register User
