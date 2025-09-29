@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const UploadPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const fileInputRef = useRef(null);
 
   const [selectedType, setSelectedType] = useState("");
   const [uploadedImage, setUploadedImage] = useState(null);
@@ -17,24 +18,28 @@ const UploadPage = () => {
   const [popupMessage, setPopupMessage] = useState("");
   const [showMessagePopup, setShowMessagePopup] = useState(false);
 
+  // ===================== Load User and Camera Preview =====================
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     setIsAuthenticated(!!storedUser);
 
-    // ถ้ามีภาพจาก CameraPage ให้ใช้เป็น preview
-    if (location.state?.capturedImage) {
+    // ตั้ง preview เฉพาะตอนแรก ถ้า location.state มี capturedImage และยังไม่มี preview
+    if (location.state?.capturedImage && !preview) {
       setPreview(location.state.capturedImage);
 
-      // แปลง URL ของภาพเป็น File object สำหรับ submit
       fetch(location.state.capturedImage)
         .then((res) => res.blob())
         .then((blob) => {
           const file = new File([blob], "captured.png", { type: blob.type });
           setUploadedImage(file);
         });
-    }
-  }, [location.state]);
 
+      // ล้าง location.state หลังใช้ครั้งแรก เพื่อไม่ให้ preview กลับมา
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate, preview]);
+
+  // ===================== Login Requirement =====================
   const requireLogin = () => {
     if (!isAuthenticated) {
       setPopupMessage("⚠ Login required to continue.");
@@ -45,10 +50,9 @@ const UploadPage = () => {
     return true;
   };
 
-  // ================= Image Upload =================
-  const handleImageUpload = (event) => {
+  // ===================== Handle Image Upload =====================
+  const handleImageUpload = (file) => {
     if (!requireLogin()) return;
-    const file = event.target.files[0];
     if (!file) return;
     setUploadedImage(file);
     const reader = new FileReader();
@@ -56,11 +60,43 @@ const UploadPage = () => {
     reader.readAsDataURL(file);
   };
 
+  const onFileChange = (e) => {
+    handleImageUpload(e.target.files[0]);
+  };
+
+  // ===================== Drag & Drop =====================
+  const onDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!requireLogin()) return;
+    const file = e.dataTransfer.files[0];
+    handleImageUpload(file);
+  };
+
+  // ===================== Select Type =====================
   const selectType = (type) => {
     if (!requireLogin()) return;
     setSelectedType(type);
   };
 
+  // ===================== Reset Form =====================
+  const resetForm = () => {
+    setSelectedType("");
+    setUploadedImage(null);
+    setMessage("");
+    setCategory("");
+    setPreview(null);
+
+    // ล้าง capturedImage จาก location.state เผื่อมีค่าเหลือ
+    navigate(location.pathname, { replace: true, state: {} });
+  };
+
+  // ===================== Submit Form =====================
   const submitForm = async () => {
     if (!requireLogin()) return;
     if (!uploadedImage || !message || !selectedType || !category) {
@@ -86,6 +122,7 @@ const UploadPage = () => {
       if (res.ok) {
         setUploadedItem(data);
         setShowPopup(true);
+        resetForm(); // รีเซ็ต form หลัง upload
       } else {
         setPopupMessage(data.detail || "Error occurred.");
         setShowMessagePopup(true);
@@ -97,7 +134,7 @@ const UploadPage = () => {
   };
 
   return (
-    <main className="flex items-center justify-center">
+    <main className="flex items-center justify-center  ">
       <div className="w-full max-w-xl bg-gray-900 backdrop-blur-lg rounded-2xl shadow-2xl p-6 space-y-4 text-white border border-gray-800">
         <h1 className="text-2xl sm:text-3xl font-bold text-center">
           Upload Image & Message
@@ -129,29 +166,25 @@ const UploadPage = () => {
         {/* Camera Button */}
         {isAuthenticated && (
           <button
-            onClick={() => {
-              if (requireLogin()) navigate("/camera");
-            }}
+            onClick={() => navigate("/camera")}
             className="w-full py-2 rounded-lg bg-green-600 hover:bg-green-700"
           >
             📷 Open Camera
           </button>
         )}
 
-        {/* Upload File */}
+        {/* Upload File / Drag & Drop */}
         <input
           type="file"
           accept="image/*"
-          onChange={handleImageUpload}
-          disabled={!isAuthenticated}
+          onChange={onFileChange}
+          ref={fileInputRef}
           className="hidden"
-          id="imageUpload"
         />
         <div
-          onClick={() => {
-            if (requireLogin())
-              document.getElementById("imageUpload").click();
-          }}
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={onDragOver}
+          onDrop={onDrop}
           className={`p-6 text-center border-2 border-dashed rounded-lg cursor-pointer ${
             isAuthenticated
               ? "border-gray-600 hover:border-violet-400 hover:bg-gray-800"
@@ -159,7 +192,9 @@ const UploadPage = () => {
           }`}
         >
           {!preview ? (
-            <p className="text-gray-400">Click or drag file to upload / Capture from Camera</p>
+            <p className="text-gray-400">
+              Click or drag file to upload / Capture from Camera
+            </p>
           ) : (
             <img
               src={preview}
@@ -169,6 +204,7 @@ const UploadPage = () => {
           )}
         </div>
 
+        {/* Message */}
         <textarea
           placeholder="Please describe the lost item..."
           value={message}
@@ -177,6 +213,7 @@ const UploadPage = () => {
           className="w-full p-3 h-24 rounded-lg border border-gray-700 bg-gray-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:outline-none disabled:opacity-50"
         />
 
+        {/* Select Type */}
         <div className="grid grid-cols-2 gap-4">
           <button
             type="button"
@@ -208,6 +245,7 @@ const UploadPage = () => {
           </button>
         </div>
 
+        {/* Submit */}
         <button
           type="button"
           onClick={submitForm}
@@ -228,8 +266,6 @@ const UploadPage = () => {
                 ✕
               </button>
               <h2 className="text-xl font-bold text-black">✅ Upload Successful!</h2>
-
-              {/* แสดงรายละเอียด item */}
               <div className="mt-3 text-center text-gray-800">
                 <p>
                   <strong>Title:</strong> {uploadedItem.title}
@@ -241,8 +277,6 @@ const UploadPage = () => {
                   <strong>Category:</strong> {uploadedItem.category}
                 </p>
               </div>
-
-              {/* แสดงภาพตรวจจับ */}
               {uploadedItem.boxed_image_data && (
                 <img
                   src={uploadedItem.boxed_image_data}
