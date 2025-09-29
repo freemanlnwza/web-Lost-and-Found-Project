@@ -38,14 +38,24 @@ async def detect_frame(image: UploadFile = File(...)):
     pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
     results = yolo_model.predict(pil_image)
-    boxed_image = results[0].plot()
 
-    boxed_bytes = io.BytesIO()
-    Image.fromarray(boxed_image).save(boxed_bytes, format="JPEG")
-    boxed_bytes = boxed_bytes.getvalue()
+    detections = []
+    for box in results[0].boxes:
+        x1, y1, x2, y2 = box.xyxy[0].tolist()  # ตำแหน่งกรอบ
+        conf = float(box.conf[0])              # ความมั่นใจ
+        cls = int(box.cls[0])                  # class id
+        label = results[0].names[cls]          # ชื่อคลาส
+        detections.append({
+            "x1": x1,
+            "y1": y1,
+            "x2": x2,
+            "y2": y2,
+            "confidence": conf,
+            "label": label
+        })
 
-    boxed_base64 = f"data:image/jpeg;base64,{base64.b64encode(boxed_bytes).decode()}"
-    return {"boxed_image": boxed_base64}
+    return {"detections": detections}
+
 
 # ---------------------------
 # Register User
