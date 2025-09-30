@@ -7,18 +7,16 @@ const CameraPage = () => {
   const detectionIntervalRef = useRef(null);
   const navigate = useNavigate();
 
-  // State สำหรับกล้อง: "environment" = กล้องหลัง, "user" = กล้องหน้า
   const [facingMode, setFacingMode] = useState("environment");
 
   const startCamera = async () => {
     try {
-      // หยุดกล้องเดิมก่อน
       const oldStream = videoRef.current?.srcObject;
       if (oldStream) oldStream.getTracks().forEach((t) => t.stop());
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: facingMode } },
-        audio: false
+        video: { facingMode: facingMode },
+        audio: false,
       });
 
       if (videoRef.current) videoRef.current.srcObject = stream;
@@ -31,13 +29,11 @@ const CameraPage = () => {
         const height = videoRef.current.videoHeight;
         if (!width || !height) return;
 
-        // ตั้งค่า canvas overlay
         canvasRef.current.width = width;
         canvasRef.current.height = height;
         const ctx = canvasRef.current.getContext("2d");
         ctx.clearRect(0, 0, width, height);
 
-        // สร้างภาพจาก video เพื่อส่งไป backend
         const tmpCanvas = document.createElement("canvas");
         tmpCanvas.width = width;
         tmpCanvas.height = height;
@@ -53,11 +49,17 @@ const CameraPage = () => {
               method: "POST",
               body: formData,
             });
+
+            if (!res.ok) {
+              console.error("Server error:", res.status);
+              return;
+            }
+
             const data = await res.json();
 
-            if (res.ok && data.detections) {
+            if (data.detections) {
               data.detections.forEach((det) => {
-                ctx.strokeStyle = det.label === "person" ? "red" : "green";
+                ctx.strokeStyle = det.label === "person" ? "red" : "lime";
                 ctx.lineWidth = 3;
                 ctx.strokeRect(det.x1, det.y1, det.x2 - det.x1, det.y2 - det.y1);
 
@@ -65,18 +67,20 @@ const CameraPage = () => {
                 ctx.fillRect(det.x1, det.y1 - 20, 120, 20);
                 ctx.fillStyle = "white";
                 ctx.font = "14px Arial";
-                ctx.fillText(`${det.label} ${(det.confidence * 100).toFixed(1)}%`, det.x1 + 5, det.y1 - 5);
+                ctx.fillText(
+                  `${det.label} ${(det.confidence * 100).toFixed(1)}%`,
+                  det.x1 + 5,
+                  det.y1 - 5
+                );
               });
             }
           } catch (err) {
             console.error("Detection error:", err);
           }
         });
-      }, 500);
-
+      }, 800); // เว้น 0.8 วินาทีเพื่อลดโหลด CPU
     } catch (err) {
-      console.warn("Cannot access camera with facingMode:", facingMode, err);
-      // fallback เป็นกล้อง default
+      console.warn("Cannot access camera:", err);
       try {
         const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
         if (videoRef.current) videoRef.current.srcObject = fallbackStream;
@@ -94,12 +98,10 @@ const CameraPage = () => {
       if (stream) stream.getTracks().forEach((t) => t.stop());
       if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facingMode]); // เรียก startCamera ใหม่เมื่อเปลี่ยนกล้อง
+  }, [facingMode]);
 
-  // ถ่ายภาพ snapshot
   const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current) return;
     const width = videoRef.current.videoWidth;
     const height = videoRef.current.videoHeight;
     if (!width || !height) return;
@@ -119,20 +121,9 @@ const CameraPage = () => {
 
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center">
-      {/* กล้อง */}
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        className="absolute w-full h-full object-cover"
-      />
-      {/* Canvas overlay */}
-      <canvas
-        ref={canvasRef}
-        className="absolute w-full h-full"
-      />
-      {/* ปุ่มถ่าย */}
+      <video ref={videoRef} autoPlay playsInline muted className="absolute w-full h-full object-cover" />
+      <canvas ref={canvasRef} className="absolute w-full h-full" />
+
       <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2">
         <button
           onClick={capturePhoto}
@@ -140,7 +131,6 @@ const CameraPage = () => {
         />
       </div>
 
-      {/* ปุ่ม Back */}
       <div className="absolute bottom-5 right-5">
         <button
           onClick={() => navigate(-1)}
@@ -150,10 +140,9 @@ const CameraPage = () => {
         </button>
       </div>
 
-      {/* ปุ่มสลับกล้อง */}
       <div className="absolute bottom-5 left-5">
         <button
-          onClick={() => setFacingMode(prev => prev === "environment" ? "user" : "environment")}
+          onClick={() => setFacingMode((prev) => (prev === "environment" ? "user" : "environment"))}
           className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-800 text-white"
         >
           Switch Camera
