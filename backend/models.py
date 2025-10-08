@@ -1,6 +1,7 @@
 from database import Base
 from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey
 from sqlalchemy.orm import relationship
+from pgvector.sqlalchemy import Vector
 
 class User(Base):
     __tablename__ = "users"
@@ -28,6 +29,10 @@ class Item(Base):
 
     # ภาพตีกรอบ
     boxed_image_data = Column(LargeBinary, nullable=True)
+
+    # Embeddings
+    text_embedding = Column(Vector(512), nullable=True)    # dimension = 512
+    image_embedding = Column(Vector(512), nullable=True)
 
     # foreign key ไปยัง user
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)

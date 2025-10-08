@@ -23,21 +23,28 @@ const UploadPage = () => {
     const storedUser = localStorage.getItem("user");
     setIsAuthenticated(!!storedUser);
 
-    // ตั้ง preview เฉพาะตอนแรก ถ้า location.state มี capturedImage และยังไม่มี preview
-    if (location.state?.capturedImage && !preview) {
-      setPreview(location.state.capturedImage);
+    if (location.state?.capturedImage && !uploadedImage) {
+      const captured = location.state.capturedImage;
 
-      fetch(location.state.capturedImage)
-        .then((res) => res.blob())
-        .then((blob) => {
-          const file = new File([blob], "captured.png", { type: blob.type });
-          setUploadedImage(file);
-        });
+      if (captured.startsWith("data:")) {
+        fetch(captured)
+          .then((res) => res.blob())
+          .then((blob) => {
+            const file = new File([blob], "captured.png", { type: blob.type });
+            setUploadedImage(file);
+            setPreview(captured);
+          })
+          .catch(() => {
+            setPopupMessage("Image can't upload, please try new Image.");
+            setShowMessagePopup(true);
+          });
+      } else {
+        setPreview(captured);
+      }
 
-      // ล้าง location.state หลังใช้ครั้งแรก เพื่อไม่ให้ preview กลับมา
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state, navigate, preview]);
+  }, [location.state, navigate, uploadedImage]);
 
   // ===================== Login Requirement =====================
   const requireLogin = () => {
@@ -51,18 +58,31 @@ const UploadPage = () => {
   };
 
   // ===================== Handle Image Upload =====================
-  const handleImageUpload = (file) => {
+  const handleImageUpload = (fileOrDataURL) => {
     if (!requireLogin()) return;
-    if (!file) return;
-    setUploadedImage(file);
-    const reader = new FileReader();
-    reader.onload = (e) => setPreview(e.target.result);
-    reader.readAsDataURL(file);
+    if (!fileOrDataURL) return;
+
+    if (typeof fileOrDataURL === "string" && fileOrDataURL.startsWith("data:")) {
+      fetch(fileOrDataURL)
+        .then((res) => res.blob())
+        .then((blob) => {
+          const file = new File([blob], "captured.png", { type: blob.type });
+          setUploadedImage(file);
+          setPreview(fileOrDataURL);
+        })
+        .catch(() => {
+          setPopupMessage("Image can't upload, please try new Image.");
+          setShowMessagePopup(true);
+        });
+    } else {
+      setUploadedImage(fileOrDataURL);
+      const reader = new FileReader();
+      reader.onload = (e) => setPreview(e.target.result);
+      reader.readAsDataURL(fileOrDataURL);
+    }
   };
 
-  const onFileChange = (e) => {
-    handleImageUpload(e.target.files[0]);
-  };
+  const onFileChange = (e) => handleImageUpload(e.target.files[0]);
 
   // ===================== Drag & Drop =====================
   const onDragOver = (e) => {
@@ -91,22 +111,35 @@ const UploadPage = () => {
     setMessage("");
     setCategory("");
     setPreview(null);
-
-    // ล้าง capturedImage จาก location.state เผื่อมีค่าเหลือ
     navigate(location.pathname, { replace: true, state: {} });
   };
 
   // ===================== Submit Form =====================
   const submitForm = async () => {
     if (!requireLogin()) return;
-    if (!uploadedImage || !message || !selectedType || !category) {
+
+    let imageFile = uploadedImage;
+    if (!imageFile && preview) {
+      try {
+        const res = await fetch(preview);
+        const blob = await res.blob();
+        imageFile = new File([blob], "upload.png", { type: blob.type });
+        setUploadedImage(imageFile);
+      } catch (err) {
+        setPopupMessage("Image can't upload, please try new Image.");
+        setShowMessagePopup(true);
+        return;
+      }
+    }
+
+    if (!imageFile || !message || !selectedType || !category) {
       setPopupMessage("Please complete all fields and select an item category.");
       setShowMessagePopup(true);
       return;
     }
 
     const formData = new FormData();
-    formData.append("image", uploadedImage);
+    formData.append("image", imageFile);
     formData.append("title", message);
     formData.append("type", selectedType);
     formData.append("category", category);
@@ -118,27 +151,60 @@ const UploadPage = () => {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
-      if (res.ok) {
-        setUploadedItem(data);
-        setShowPopup(true);
-        resetForm(); // รีเซ็ต form หลัง upload
-      } else {
-        setPopupMessage(data.detail || "Error occurred.");
+
+      if (!res.ok) {
+        setPopupMessage("Image can't upload, please try new Image.");
         setShowMessagePopup(true);
+        return;
       }
+
+      const data = await res.json();
+      setUploadedItem(data);
+      setShowPopup(true);
+      resetForm();
     } catch (error) {
-      setPopupMessage("A connection error occurred.");
+      setPopupMessage("Image can't upload, please try new Image.");
       setShowMessagePopup(true);
     }
   };
 
+  // ===================== Fetch Found Items =====================
+const fetchFoundItems = async () => {
+  if (!requireLogin()) return;
+
+  try {
+    const formData = new FormData();
+    if (message) formData.append("text", message);
+    if (uploadedImage) formData.append("image", uploadedImage);
+
+    const res = await fetch("http://localhost:8000/search", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      throw new Error("Search failed");
+    }
+
+    const data = await res.json();
+
+    // ✅ แทนที่จะ show popup -> ไปหน้าใหม่ /result พร้อมส่ง data
+    navigate("/searchItem", { state: { foundItems: data } });
+
+  } catch (err) {
+    setPopupMessage("Search failed, please try again.");
+    setShowMessagePopup(true);
+  }
+};
+
+  // ===================== UI =====================
   return (
-    <main className="flex items-center justify-center  ">
+    <main className="flex items-center justify-center">
       <div className="w-full max-w-xl bg-gray-900 backdrop-blur-lg rounded-2xl shadow-2xl p-6 space-y-4 text-white border border-gray-800">
         <h1 className="text-2xl sm:text-3xl font-bold text-center">
           Upload Image & Message
         </h1>
+
         {!isAuthenticated && (
           <p className="text-red-400 text-center">
             ⚠ Please log in to continue.
@@ -229,13 +295,12 @@ const UploadPage = () => {
           >
             📝 Report lost item
           </button>
+
           <button
             type="button"
-            onClick={() => selectType("found")}
+            onClick={fetchFoundItems} // เรียก endpoint /search
             disabled={!isAuthenticated}
             className={`py-3 rounded-xl font-semibold text-sm sm:text-base transition-all ${
-              selectedType === "found" ? "ring-2 ring-green-400" : ""
-            } ${
               !isAuthenticated
                 ? "bg-gray-700 opacity-50 cursor-not-allowed"
                 : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
@@ -265,25 +330,38 @@ const UploadPage = () => {
               >
                 ✕
               </button>
-              <h2 className="text-xl font-bold text-black">✅ Upload Successful!</h2>
+              <h2 className="text-xl font-bold text-black">✅ Result</h2>
               <div className="mt-3 text-center text-gray-800">
-                <p>
-                  <strong>Title:</strong> {uploadedItem.title}
-                </p>
-                <p>
-                  <strong>Type:</strong> {uploadedItem.type}
-                </p>
-                <p>
-                  <strong>Category:</strong> {uploadedItem.category}
-                </p>
+                {Array.isArray(uploadedItem) ? (
+                  uploadedItem.map((item, idx) => (
+                    <div key={idx} className="mb-3">
+                      <p><strong>Title:</strong> {item.title}</p>
+                      <p><strong>Type:</strong> {item.type}</p>
+                      <p><strong>Category:</strong> {item.category}</p>
+                      {item.boxed_image_data && (
+                        <img
+                          src={item.boxed_image_data}
+                          alt="Detected result"
+                          className="mx-auto mt-1 rounded-lg w-64 h-48 object-contain"
+                        />
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <p><strong>Title:</strong> {uploadedItem.title}</p>
+                    <p><strong>Type:</strong> {uploadedItem.type}</p>
+                    <p><strong>Category:</strong> {uploadedItem.category}</p>
+                    {uploadedItem.boxed_image_data && (
+                      <img
+                        src={uploadedItem.boxed_image_data}
+                        alt="Detected result"
+                        className="mx-auto mt-1 rounded-lg w-64 h-48 object-contain"
+                      />
+                    )}
+                  </>
+                )}
               </div>
-              {uploadedItem.boxed_image_data && (
-                <img
-                  src={uploadedItem.boxed_image_data}
-                  alt="Detected result"
-                  className="mx-auto mt-3 rounded-lg w-64 h-48 object-contain"
-                />
-              )}
             </div>
           </div>
         )}

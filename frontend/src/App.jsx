@@ -7,6 +7,7 @@ import Lost from "./Lost.jsx";
 import Login from "./Login.jsx";
 import Register from "./Register.jsx";
 import Profile from "./Profile.jsx";
+import SearchPage from "./SearchPage.jsx";
 
 function AppWrapper() {
   return (
@@ -101,6 +102,7 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/camera" element={<CameraPage />} />
+               <Route path="/searchItem" element={<SearchPage />} />
             </Routes>
           </div>
         )}

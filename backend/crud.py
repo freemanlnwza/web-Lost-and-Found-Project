@@ -2,8 +2,10 @@ from sqlalchemy.orm import Session, joinedload
 from models import User, Item
 from schemas import UserCreate, ItemCreate
 import bcrypt
+import io
 from fastapi import UploadFile
 from typing import Optional, List
+from utils import get_text_embedding, get_image_embedding
 
 # ===========================
 # User
@@ -44,21 +46,33 @@ def create_item(
 ) -> Item:
     # อ่านไฟล์ภาพต้นฉบับ
     image_bytes = image_file.file.read()
+    image_file.file.seek(0)  # reset pointer
+    
+    # สร้าง embedding
+    import numpy as np
+    from utils import get_text_embedding, get_image_embedding
+    
+    text_emb = get_text_embedding(item.title).tolist()
+    # ส่ง bytes ให้ฟังก์ชันแทน UploadFile เพื่อไม่ให้เกิดปัญหา
+    image_emb = get_image_embedding(io.BytesIO(image_bytes)).tolist()
 
     db_item = Item(
         title=item.title,
         type=item.type,
         category=item.category,
         image_data=image_bytes,
-        boxed_image_data=boxed_image_data,  # ต้องเพิ่มฟิลด์นี้ใน models.py
+        boxed_image_data=boxed_image_data,
         image_filename=image_file.filename,
         image_content_type=image_file.content_type,
-        user_id=user_id
+        user_id=user_id,
+        text_embedding=text_emb,
+        image_embedding=image_emb
     )
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
     return db_item
+
 
 
 def get_items(db: Session, type_filter: Optional[str] = None) -> List[Item]:
