@@ -6,6 +6,7 @@ import crud
 import models
 import schemas
 import base64
+import numpy as np
 from ultralytics import YOLO
 from PIL import Image
 import io
@@ -196,24 +197,54 @@ async def search_items(
         raise HTTPException(status_code=400, detail="Provide text or image for search")
 
     try:
+        # ---- สร้าง embedding สำหรับ text หรือ image ----
         if text:
-            query_emb = get_text_embedding(text).tolist()
+            query_emb = get_text_embedding(text)
             field = models.Item.text_embedding
         else:
-            query_emb = get_image_embedding(image).tolist()
+            # อ่านภาพเป็น bytes เพื่อส่งเข้าฟังก์ชัน embedding
+            image_bytes = await image.read()
+            query_emb = get_image_embedding(image_bytes)
             field = models.Item.image_embedding
 
-        items = db.query(models.Item).order_by(field.l2_distance(query_emb)).limit(top_k).all()
+        # ---- ดึงข้อมูลจากฐานข้อมูล (เรียงตามความใกล้เคียง) ----
+        items = (
+            db.query(models.Item)
+            .order_by(field.l2_distance(query_emb))  # ต้องแน่ใจว่าฐานข้อมูลรองรับ vector
+            .limit(top_k)
+            .all()
+        )
 
-        return [
-            schemas.ItemOut(
-                id=i.id, title=i.title, type=i.type, category=i.category,
-                image_data=f"data:{i.image_content_type};base64,{base64.b64encode(i.image_data).decode()}",
-                boxed_image_data=f"data:{i.image_content_type};base64,{base64.b64encode(i.boxed_image_data).decode()}" if i.boxed_image_data else None,
-                image_filename=i.image_filename,
-                user_id=i.user_id,
-                username=i.user.username if i.user else None
-            ) for i in items
-        ]
+        # ---- ฟังก์ชัน cosine similarity ----
+        def cosine_similarity(a, b):
+            a, b = np.array(a), np.array(b)
+            denom = (np.linalg.norm(a) * np.linalg.norm(b))
+            return float(np.dot(a, b) / denom) if denom != 0 else 0.0
+
+        results = []
+        for i in items:
+            item_emb = i.text_embedding if text else i.image_embedding
+            sim = cosine_similarity(query_emb, item_emb)
+
+            results.append({
+                "id": i.id,
+                "title": i.title,
+                "type": i.type,
+                "category": i.category,
+                "image_data": f"data:{i.image_content_type};base64,{base64.b64encode(i.image_data).decode()}" if i.image_data else None,
+                "boxed_image_data": f"data:{i.image_content_type};base64,{base64.b64encode(i.boxed_image_data).decode()}" if i.boxed_image_data else None,
+                "image_filename": i.image_filename,
+                "user_id": i.user_id,
+                "username": i.user.username if i.user else None,
+
+                # ✅ เพิ่มค่าช่วย debug / visualize ได้
+                "similarity": round(sim, 4),
+                "query_vector_first2": query_emb[:2] if len(query_emb) >= 2 else query_emb,
+                "item_vector_first2": item_emb[:2] if len(item_emb) >= 2 else item_emb,
+            })
+
+        return results
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {e}")
+    

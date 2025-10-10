@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation 
 import { useState } from "react";
 import UploadPage from "./UploadPage.jsx";
 import CameraPage from "./CameraPage.jsx";
-import Found from "./Found.jsx";
+
 import Lost from "./Lost.jsx";
 import Login from "./Login.jsx";
 import Register from "./Register.jsx";
@@ -41,7 +41,7 @@ function App() {
               <div className="hidden md:flex space-x-6">
                 <NavLink to="/" label="Home" />
                 <NavLink to="/lost" label="Lost" />
-                <NavLink to="/found" label="Found" />
+                
                 <NavLink to="/support" label="Support" />
                 {!isAuthenticated ? (
                   <>
@@ -66,7 +66,7 @@ function App() {
             <div className="md:hidden bg-[#1a1a1a] border-t border-gray-800 px-4 py-3 space-y-2">
               <NavLink to="/" label="Home" onClick={() => setIsOpen(false)} />
               <NavLink to="/lost" label="Lost" onClick={() => setIsOpen(false)} />
-              <NavLink to="/found" label="Found" onClick={() => setIsOpen(false)} />
+              
               <NavLink to="/support" label="Support" onClick={() => setIsOpen(false)} />
               {!isAuthenticated ? (
                 <>
@@ -97,7 +97,7 @@ function App() {
             <Routes>
               <Route path="/" element={<UploadPage />} />
               <Route path="/lost" element={<Lost />} />
-              <Route path="/found" element={<Found />} />
+              
               <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
               <Route path="/register" element={<Register />} />
               <Route path="/profile" element={<Profile />} />
