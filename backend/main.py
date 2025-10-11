@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine, Base, get_db
@@ -11,6 +11,7 @@ from ultralytics import YOLO
 from PIL import Image
 import io
 from utils import get_text_embedding, get_image_embedding
+from schemas import MessageCreate, ChatCreateRequest, MessageSendRequest
 
 # ---------------------------
 # Initialize
@@ -95,24 +96,14 @@ async def upload_item(
     if not image.filename.lower().endswith((".jpg", ".jpeg", ".png")):
         raise HTTPException(status_code=400, detail="File must be an image (jpg, jpeg, png)")
 
-    # ---------- Load image safely ----------
     try:
         image_bytes = await image.read()
-        print(f"[DEBUG] Image size: {len(image_bytes)} bytes")
         if len(image_bytes) == 0:
             raise HTTPException(status_code=400, detail="Empty image file")
-
-        # ใช้ BytesIO เปิดภาพ
-        image_stream = io.BytesIO(image_bytes)
-        pil_image = Image.open(image_stream)
-        pil_image.load()  # โหลดข้อมูลทั้งหมด
-        pil_image = pil_image.convert("RGB")  # บังคับเป็น RGB เสมอ
-
+        pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     except Exception as e:
-        print("[ERROR] Cannot open image:", e)
         raise HTTPException(status_code=400, detail=f"Cannot process image: {e}")
 
-    # ---------- YOLO Detection ----------
     try:
         results = yolo_model.predict(pil_image)
         boxed_image = results[0].plot()
@@ -122,10 +113,8 @@ async def upload_item(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"YOLO detection failed: {e}")
 
-    # ---------- Reset pointer before CRUD ----------
     image.file.seek(0)
 
-    # ---------- Save Item ----------
     item_in = schemas.ItemCreate(title=title, type=type, category=category)
     item = crud.create_item(
         db=db,
@@ -135,7 +124,6 @@ async def upload_item(
         boxed_image_data=boxed_image_bytes
     )
 
-    # ---------- Encode image for response ----------
     def encode_img(data):
         return f"data:{item.image_content_type};base64,{base64.b64encode(data).decode()}"
 
@@ -150,7 +138,6 @@ async def upload_item(
         user_id=item.user_id,
         username=item.user.username if item.user else None
     )
-
 
 # ---------------------------
 # Get Items
@@ -197,25 +184,21 @@ async def search_items(
         raise HTTPException(status_code=400, detail="Provide text or image for search")
 
     try:
-        # ---- สร้าง embedding สำหรับ text หรือ image ----
         if text:
             query_emb = get_text_embedding(text)
             field = models.Item.text_embedding
         else:
-            # อ่านภาพเป็น bytes เพื่อส่งเข้าฟังก์ชัน embedding
             image_bytes = await image.read()
             query_emb = get_image_embedding(image_bytes)
             field = models.Item.image_embedding
 
-        # ---- ดึงข้อมูลจากฐานข้อมูล (เรียงตามความใกล้เคียง) ----
         items = (
             db.query(models.Item)
-            .order_by(field.l2_distance(query_emb))  # ต้องแน่ใจว่าฐานข้อมูลรองรับ vector
+            .order_by(field.l2_distance(query_emb))
             .limit(top_k)
             .all()
         )
 
-        # ---- ฟังก์ชัน cosine similarity ----
         def cosine_similarity(a, b):
             a, b = np.array(a), np.array(b)
             denom = (np.linalg.norm(a) * np.linalg.norm(b))
@@ -236,8 +219,6 @@ async def search_items(
                 "image_filename": i.image_filename,
                 "user_id": i.user_id,
                 "username": i.user.username if i.user else None,
-
-                # ✅ เพิ่มค่าช่วย debug / visualize ได้
                 "similarity": round(sim, 4),
                 "query_vector_first2": query_emb[:2] if len(query_emb) >= 2 else query_emb,
                 "item_vector_first2": item_emb[:2] if len(item_emb) >= 2 else item_emb,
@@ -247,4 +228,53 @@ async def search_items(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {e}")
-    
+
+# ---------------------------
+# Chats API (JSON)
+# ---------------------------
+@app.post("/api/chats/get-or-create")
+def get_or_create_chat(req: ChatCreateRequest, db: Session = Depends(get_db)):
+    chat = crud.get_or_create_chat(db, user1_id=req.user1_id, user2_id=req.user2_id)
+    return {
+        "chat_id": chat.id,
+        "user1_id": chat.user1_id,
+        "user2_id": chat.user2_id,
+        "created_at": chat.created_at,
+    }
+
+@app.get("/api/chats/{user_id}")
+def get_user_chats(user_id: int, db: Session = Depends(get_db)):
+    chats = crud.get_chats_for_user(db, user_id=user_id)
+    return [
+        {
+            "chat_id": c.id,
+            "user1_id": c.user1_id,
+            "user2_id": c.user2_id,
+            "created_at": c.created_at,
+        } for c in chats
+    ]
+
+@app.get("/api/chats/{chat_id}/messages")
+def get_chat_messages(chat_id: int, db: Session = Depends(get_db)):
+    messages = crud.get_messages_by_chat(db, chat_id)
+    return [
+        {
+            "id": m.id,
+            "chat_id": m.chat_id,
+            "sender_id": m.sender_id,
+            "message": m.message,
+            "created_at": m.created_at,
+        } for m in messages
+    ]
+
+@app.post("/api/messages/send")
+def send_message(req: MessageSendRequest, db: Session = Depends(get_db)):
+    msg_in = MessageCreate(chat_id=req.chat_id, sender_id=req.sender_id, message=req.message)
+    msg = crud.create_message(db, msg_in)
+    return {
+        "id": msg.id,
+        "chat_id": msg.chat_id,
+        "sender_id": msg.sender_id,
+        "message": msg.message,
+        "created_at": msg.created_at,
+    }

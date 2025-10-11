@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-const Lost = () => {
+const Lost = ({ currentUserId }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchLostItems = async () => {
@@ -19,6 +21,31 @@ const Lost = () => {
 
     fetchLostItems();
   }, []);
+
+  const handleChat = async (otherUserId) => {
+    try {
+      // ส่ง JSON แทน form-urlencoded
+      const res = await fetch("http://localhost:8000/api/chats/get-or-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user1_id: currentUserId,
+          user2_id: otherUserId,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to start chat");
+
+      const chat = await res.json();
+      // ไปหน้า chat โดยส่ง chatId และ currentUserId
+      navigate(`/chat/${chat.chat_id}`, {
+        state: { currentUserId, otherUserId },
+      });
+    } catch (error) {
+      console.error("Error starting chat:", error);
+      alert("Cannot start chat right now.");
+    }
+  };
 
   if (loading) {
     return (
@@ -50,7 +77,7 @@ const Lost = () => {
                            hover:shadow-2xl hover:scale-105 transition duration-300"
               >
                 <img
-                  src={item.image_data} // ใช้ตรง ๆ จาก backend
+                  src={item.image_data}
                   alt={item.title}
                   className="w-full h-56 object-cover"
                 />
@@ -67,11 +94,12 @@ const Lost = () => {
                   </p>
                   <div className="mt-auto">
                     <button
+                      onClick={() => handleChat(item.user_id)}
                       className="w-full py-2 rounded-lg font-semibold text-white 
-                                 bg-gradient-to-r from-indigo-500 to-blue-600 
-                                 hover:from-indigo-600 hover:to-blue-700 transition-all"
+                                 bg-gradient-to-r from-green-500 to-emerald-600 
+                                 hover:from-green-600 hover:to-emerald-700 transition-all"
                     >
-                      View Details
+                      💬 Chat
                     </button>
                   </div>
                 </div>
