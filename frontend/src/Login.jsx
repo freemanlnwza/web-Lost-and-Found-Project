@@ -46,15 +46,13 @@ const Login = ({ setIsAuthenticated }) => {
 
       const data = await res.json();
 
-      if (res.ok) {
+            if (res.ok) {
         showMessage(`Welcome ${data.username}!`);
-        // ✅ เก็บ user ลง localStorage (ไม่ใช้ token)
         localStorage.setItem("user", JSON.stringify(data));
-        setIsAuthenticated(true);
+        setIsAuthenticated(true); // App.jsx จะ update currentUser ด้วย useEffect
 
-        // รอ popup ปิดก่อน navigate
         setTimeout(() => {
-          navigate("/");
+          navigate("/"); // กลับหน้า Home
         }, 1500);
       } else {
         showMessage(data.detail || "Invalid username or password.");
