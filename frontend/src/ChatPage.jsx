@@ -28,9 +28,10 @@ const ChatPage = ({ currentUserId }) => {
   }, [chatId]);
 
   // ส่งข้อความ
- const sendMessage = async () => {
+const sendMessage = async () => {
   if (!input.trim()) return;
 
+  const tempId = `temp-${Date.now()}`;
   const newMsg = {
     chat_id: Number(chatId),
     sender_id: Number(currentUserId),
@@ -40,7 +41,7 @@ const ChatPage = ({ currentUserId }) => {
   // แสดงข้อความชั่วคราวทันที
   setMessages((prev) => [
     ...prev,
-    { ...newMsg, id: `temp-${Date.now()}`, created_at: new Date().toISOString() },
+    { ...newMsg, id: tempId, created_at: new Date().toISOString() },
   ]);
   setInput("");
 
@@ -48,26 +49,26 @@ const ChatPage = ({ currentUserId }) => {
     const res = await fetch("http://localhost:8000/api/messages/send", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json", // ✅ บอกว่าเป็น JSON
+        "Content-Type": "application/json", // ส่ง JSON
       },
-      body: JSON.stringify(newMsg), // ✅ แปลงเป็น JSON
+      body: JSON.stringify(newMsg),
     });
 
     if (!res.ok) throw new Error("Failed to send");
+
     const savedMsg = await res.json();
 
-    // แทนที่ข้อความชั่วคราวด้วยข้อความที่เซฟแล้ว
+    // แทนที่ข้อความชั่วคราวด้วยข้อความจริง
     setMessages((prev) =>
-      prev.map((m) =>
-        m.id.startsWith("temp-") && m.created_at === newMsg.created_at
-          ? savedMsg
-          : m
-      )
+      prev.map((m) => (m.id === tempId ? savedMsg : m))
     );
   } catch (err) {
     console.error("Send failed:", err);
+    // ลบข้อความชั่วคราวถ้าส่งไม่สำเร็จ
+    setMessages((prev) => prev.filter((m) => m.id !== tempId));
   }
 };
+
 
   // Scroll อัตโนมัติเมื่อมีข้อความใหม่
   useEffect(() => {

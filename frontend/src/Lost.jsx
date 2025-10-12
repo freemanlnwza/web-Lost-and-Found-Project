@@ -11,7 +11,12 @@ const Lost = ({ currentUserId }) => {
       try {
         const res = await fetch("http://localhost:8000/api/lost-items");
         const data = await res.json();
-        setItems(data);
+
+        // 🔹 กรองโพสต์ของตัวเองออก
+        const filteredItems = data.filter(
+          (item) => item.user_id !== currentUserId
+        );
+        setItems(filteredItems);
       } catch (error) {
         console.error("Error fetching lost items:", error);
       } finally {
@@ -20,11 +25,10 @@ const Lost = ({ currentUserId }) => {
     };
 
     fetchLostItems();
-  }, []);
+  }, [currentUserId]);
 
   const handleChat = async (otherUserId) => {
     try {
-      // ส่ง JSON แทน form-urlencoded
       const res = await fetch("http://localhost:8000/api/chats/get-or-create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -37,7 +41,6 @@ const Lost = ({ currentUserId }) => {
       if (!res.ok) throw new Error("Failed to start chat");
 
       const chat = await res.json();
-      // ไปหน้า chat โดยส่ง chatId และ currentUserId
       navigate(`/chat/${chat.chat_id}`, {
         state: { currentUserId, otherUserId },
       });
