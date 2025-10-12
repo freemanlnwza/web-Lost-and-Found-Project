@@ -12,7 +12,7 @@ const Lost = ({ currentUserId }) => {
         const res = await fetch("http://localhost:8000/api/lost-items");
         const data = await res.json();
 
-        // 🔹 กรองโพสต์ของตัวเองออก
+        // กรองโพสต์ของตัวเองออก
         const filteredItems = data.filter(
           (item) => item.user_id !== currentUserId
         );
@@ -27,7 +27,7 @@ const Lost = ({ currentUserId }) => {
     fetchLostItems();
   }, [currentUserId]);
 
-  const handleChat = async (otherUserId) => {
+  const handleChat = async (otherUserId, itemId) => {
     try {
       const res = await fetch("http://localhost:8000/api/chats/get-or-create", {
         method: "POST",
@@ -35,14 +35,21 @@ const Lost = ({ currentUserId }) => {
         body: JSON.stringify({
           user1_id: currentUserId,
           user2_id: otherUserId,
+          item_id: itemId, // ส่ง item_id เพื่อให้ backend ดึง image
         }),
       });
 
       if (!res.ok) throw new Error("Failed to start chat");
 
       const chat = await res.json();
+      // chat จะมี chat_id, item_image, item_title
       navigate(`/chat/${chat.chat_id}`, {
-        state: { currentUserId, otherUserId },
+        state: {
+          currentUserId,
+          otherUserId,
+          itemImage: chat.item_image,
+          itemTitle: chat.item_title,
+        },
       });
     } catch (error) {
       console.error("Error starting chat:", error);
@@ -97,10 +104,10 @@ const Lost = ({ currentUserId }) => {
                   </p>
                   <div className="mt-auto">
                     <button
-                      onClick={() => handleChat(item.user_id)}
+                      onClick={() => handleChat(item.user_id, item.id)}
                       className="w-full py-2 rounded-lg font-semibold text-white 
-                                 bg-gradient-to-r from-green-500 to-emerald-600 
-                                 hover:from-green-600 hover:to-emerald-700 transition-all"
+                                bg-gradient-to-r from-green-500 to-emerald-600 
+                                hover:from-green-600 hover:to-emerald-700 transition-all"
                     >
                       💬 Chat
                     </button>
