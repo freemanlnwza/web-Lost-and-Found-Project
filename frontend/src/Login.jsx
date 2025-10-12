@@ -46,13 +46,22 @@ const Login = ({ setIsAuthenticated }) => {
 
       const data = await res.json();
 
-            if (res.ok) {
+      if (res.ok) {
         showMessage(`Welcome ${data.username}!`);
         localStorage.setItem("user", JSON.stringify(data));
         setIsAuthenticated(true); // App.jsx จะ update currentUser ด้วย useEffect
 
         setTimeout(() => {
-          navigate("/"); // กลับหน้า Home
+          // ✅ Redirect based on role
+          console.log("Login data:", data); // Debug: see what data contains
+          
+          if (data.role === "admin") {
+            console.log("Redirecting to /AdminPage");
+            navigate("/AdminPage"); // Admin goes to admin page
+          } else {
+            console.log("Redirecting to /");
+            navigate("/"); // Regular user goes to home
+          }
         }, 1500);
       } else {
         showMessage(data.detail || "Invalid username or password.");
@@ -124,7 +133,7 @@ const Login = ({ setIsAuthenticated }) => {
 
         {/* Register link */}
         <p className="text-center text-sm text-gray-400">
-          Don’t have an account?{" "}
+          Don't have an account?{" "}
           <a href="/register" className="text-blue-400 hover:underline">
             Register
           </a>
