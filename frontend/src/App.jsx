@@ -9,7 +9,7 @@ import Register from "./Register.jsx";
 import Profile from "./Profile.jsx";
 import SearchPage from "./SearchPage.jsx";
 import GuideBook from "./GuideBook.jsx";
-
+import AdminPage from "./adminpage.jsx";
 
 function AppWrapper() {
   return (
@@ -84,6 +84,7 @@ function App() {
                 <>
                   <NavLink to="/login" label="Login" onClick={() => setIsOpen(false)} />
                   <NavLink to="/register" label="Register" onClick={() => setIsOpen(false)} />
+                  
                 </>
               ) : (
                 <>
@@ -116,6 +117,8 @@ function App() {
               <Route path="/searchItem" element={<SearchPage />} />
               <Route path="/chat/:chatId" element={<ChatPage currentUserId={currentUser?.id} />} />
               <Route path="/guidebook" element={<GuideBook />} />
+              <Route path="/adminpage" element={<AdminPage />} />
+
             </Routes>
           </div>
         )}
