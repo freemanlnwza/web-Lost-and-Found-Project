@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
 
 const ChatPage = ({ currentUserId }) => {
   const { chatId } = useParams();
@@ -7,39 +7,57 @@ const ChatPage = ({ currentUserId }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
-  const [item, setItem] = useState({
-    image: location.state?.itemImage || null,
-    title: location.state?.itemTitle || null,
-  });
+  const [isOpen, setIsOpen] = useState(false);
   const bottomRef = useRef(null);
 
-  // โหลดข้อความ
+  // กำหนด currentUser จาก localStorage
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem("user");
+    return saved ? JSON.parse(saved) : null;
+  });
+  const isAuthenticated = !!currentUser;
+
+  const chatHeader = {
+    itemImage: location.state?.itemImage || null,
+    itemTitle: location.state?.itemTitle || null,
+    ownerUsername: location.state?.ownerUsername || null,
+  };
+
   useEffect(() => {
     if (!chatId) return;
-    const fetchChat = async () => {
+
+    const fetchChatMessages = async () => {
       try {
         const res = await fetch(`http://localhost:8000/api/chats/${chatId}/messages`);
         const messagesData = await res.json();
-        setMessages(Array.isArray(messagesData) ? messagesData : []);
+        const mappedMessages = messagesData.map((m) => ({
+          ...m,
+          username:
+            m.sender_id === Number(currentUserId)
+              ? "You"
+              : m.username || chatHeader.ownerUsername || "Unknown",
+        }));
+        setMessages(mappedMessages);
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
-    fetchChat();
-  }, [chatId]);
+
+    fetchChatMessages();
+  }, [chatId, currentUserId, chatHeader.ownerUsername]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages]);
 
   const sendMessage = async () => {
     const text = input.trim();
     if (!text) return;
 
     const tempId = `temp-${Date.now()}`;
-    const newMsg = {
-      chat_id: Number(chatId),
-      sender_id: Number(currentUserId),
-      message: text,
-    };
+    const newMsg = { chat_id: Number(chatId), sender_id: Number(currentUserId), message: text };
 
     setMessages((prev) => [
       ...prev,
@@ -55,7 +73,9 @@ const ChatPage = ({ currentUserId }) => {
       });
       if (!res.ok) throw new Error("Failed to send message");
       const savedMsg = await res.json();
-      setMessages((prev) => prev.map((m) => (m.id === tempId ? savedMsg : m)));
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...savedMsg, username: "You" } : m))
+      );
     } catch (err) {
       console.error(err);
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -63,35 +83,87 @@ const ChatPage = ({ currentUserId }) => {
     }
   };
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white p-4">
-      <div className="flex justify-between items-center mb-4">
-        {item && (
-          <div className="flex items-center space-x-2">
-            {item.image && (
-              <img
-                src={item.image}
-                alt={item.title}
-                className="w-12 h-12 object-cover rounded"
-              />
-            )}
-            <span className="text-sm font-semibold">{item.title}</span>
+    <div className="fixed inset-0 flex flex-col bg-gray-900 text-white z-50">
+      {/* App Header */}
+      <div className="flex-none">
+        <nav className="w-full bg-[#111827] border-b border-gray-800 text-white shadow-md">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shadow-lg border border-black/40">
+                <span className="text-black font-bold text-sm">L&F</span>
+              </div>
+              <span className="text-xl font-extrabold tracking-wide text-white">Lost & Found</span>
+            </div>
+
+            {/* NavLinks */}
+            <div className="hidden md:flex space-x-6">
+              <NavLink to="/" label="Home" />
+              <NavLink to="/lost" label="Lost" />
+              <NavLink to="/support" label="Support" />
+              {!isAuthenticated ? (
+                <>
+                  <NavLink to="/login" label="Login" />
+                  <NavLink to="/register" label="Register" />
+                </>
+              ) : (
+                <>
+                  <NavLink to="/profile" label="Profile" />
+                  <LogoutButton setCurrentUser={setCurrentUser} />
+                </>
+              )}
+            </div>
+
+            {/* Hamburger menu */}
+            <div className="md:hidden">
+              <button onClick={() => setIsOpen(!isOpen)} className="text-yellow-400 focus:outline-none">
+                {isOpen ? <span className="text-2xl">&#x2715;</span> : <span className="text-2xl">&#9776;</span>}
+              </button>
+            </div>
           </div>
-        )}
+
+          {isOpen && (
+            <div className="md:hidden bg-[#1a1a1a] border-t border-gray-800 px-4 py-3 space-y-2">
+              <NavLink to="/" label="Home" onClick={() => setIsOpen(false)} />
+              <NavLink to="/lost" label="Lost" onClick={() => setIsOpen(false)} />
+              <NavLink to="/support" label="Support" onClick={() => setIsOpen(false)} />
+              {!isAuthenticated ? (
+                <>
+                  <NavLink to="/login" label="Login" onClick={() => setIsOpen(false)} />
+                  <NavLink to="/register" label="Register" onClick={() => setIsOpen(false)} />
+                </>
+              ) : (
+                <>
+                  <NavLink to="/profile" label="Profile" onClick={() => setIsOpen(false)} />
+                  <LogoutButton setCurrentUser={setCurrentUser} />
+                </>
+              )}
+            </div>
+          )}
+        </nav>
       </div>
 
-      {loading ? (
-        <p className="text-gray-300 animate-pulse">Loading messages...</p>
-      ) : (
-        <div className="flex-grow overflow-y-auto mb-4 space-y-2">
-          {messages.length === 0 && (
-            <p className="text-gray-400 text-center mt-4">No messages yet.</p>
+      {/* Chat header */}
+      <div className="flex-none flex items-center p-4 border-b border-gray-700">
+        {chatHeader.itemImage && (
+          <img src={chatHeader.itemImage} alt={chatHeader.itemTitle} className="w-12 h-12 object-cover rounded" />
+        )}
+        <div className="flex flex-col ml-3">
+          {chatHeader.ownerUsername && (
+            <span className="text-lg font-bold text-white">{chatHeader.ownerUsername}</span>
           )}
-          {messages.map((m) => {
+          <span className="text-xs text-gray-400 font-medium">{chatHeader.itemTitle}</span>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        {loading ? (
+          <p className="text-gray-300 animate-pulse text-center">Loading messages...</p>
+        ) : messages.length === 0 ? (
+          <p className="text-gray-400 text-center mt-4">No messages yet.</p>
+        ) : (
+          messages.map((m) => {
             const isMine = m.sender_id === Number(currentUserId);
             return (
               <div
@@ -100,31 +172,28 @@ const ChatPage = ({ currentUserId }) => {
                   isMine ? "bg-blue-600 ml-auto flex-row-reverse" : "bg-gray-700"
                 }`}
               >
-                {m.image_data && (
-                  <img
-                    src={m.image_data}
-                    alt="Item"
-                    className="w-16 h-16 object-cover rounded mb-1"
-                  />
-                )}
                 <div className="flex flex-col">
-                  
+                  {!isMine && <span className="text-xs text-gray-300 font-semibold mb-1">{m.username}</span>}
                   <span>{m.message}</span>
                   <div className="text-xs text-gray-300 mt-1">
-                    {m.created_at ? new Date(m.created_at).toLocaleTimeString() : "-"}
+                    {m.created_at
+                      ? new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : "-"}
                   </div>
                 </div>
               </div>
             );
-          })}
-          <div ref={bottomRef} />
-        </div>
-      )}
+          })
+        )}
+        <div ref={bottomRef} />
+      </div>
 
-      <div className="flex space-x-2">
+      {/* Input */}
+      <div className="flex-none flex p-4 border-t border-gray-700">
         <input
-          className="flex-grow p-2 rounded bg-gray-800"
+          className="flex-grow p-2 rounded bg-gray-800 text-white placeholder-gray-400"
           value={input}
+          autoFocus
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -134,14 +203,41 @@ const ChatPage = ({ currentUserId }) => {
           }}
           placeholder="Type a message..."
         />
-        <button
-          className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700"
-          onClick={sendMessage}
-        >
+        <button className="ml-2 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700" onClick={sendMessage}>
           Send
         </button>
       </div>
     </div>
+  );
+};
+
+// NavLink component
+const NavLink = ({ to, label, onClick }) => (
+  <Link
+    to={to}
+    onClick={onClick}
+    className="block md:inline text-white font-medium px-3 py-2 hover:text-yellow-400 hover:underline underline-offset-4 transition"
+  >
+    {label}
+  </Link>
+);
+
+// Logout button
+const LogoutButton = ({ setCurrentUser }) => {
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    setCurrentUser(null);
+    navigate("/login", { replace: true });
+  };
+  return (
+    <button
+      onClick={handleLogout}
+      className="block md:inline text-white font-medium px-3 py-2 hover:text-red-400 hover:underline underline-offset-4 transition"
+    >
+      Logout
+    </button>
   );
 };
 
