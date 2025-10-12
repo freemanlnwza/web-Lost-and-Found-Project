@@ -198,17 +198,19 @@ async def search_items(
 def get_or_create_chat(req: schemas.ChatCreateRequest, db: Session = Depends(get_db)):
     chat = crud.get_or_create_chat(db, req.user1_id, req.user2_id, getattr(req, "item_id", None))
     
-    # encode image if exists
     item_image = encode_image(chat.item.image_data, chat.item.image_content_type) if chat.item else None
     
     return {
         "chat_id": chat.id,
         "user1_id": chat.user1_id,
+        "user1_username": chat.user1.username if chat.user1 else None,
         "user2_id": chat.user2_id,
+        "user2_username": chat.user2.username if chat.user2 else None,
         "created_at": chat.created_at,
         "item_image": item_image,
         "item_title": chat.item.title if chat.item else None
     }
+
 
 @app.get("/api/chats/{user_id}")
 def get_user_chats(user_id: int, db: Session = Depends(get_db)):
@@ -218,12 +220,15 @@ def get_user_chats(user_id: int, db: Session = Depends(get_db)):
         result.append({
             "chat_id": c.id,
             "user1_id": c.user1_id,
+            "user1_username": c.user1.username if c.user1 else None,
             "user2_id": c.user2_id,
+            "user2_username": c.user2.username if c.user2 else None,
             "created_at": c.created_at,
             "item_image": encode_image(c.item.image_data, c.item.image_content_type) if c.item else None,
             "item_title": c.item.title if c.item else None
         })
     return result
+
 
 # ---------------------------
 # Messages API (ไม่มี username และ image)
@@ -237,7 +242,8 @@ def get_chat_messages(chat_id: int, db: Session = Depends(get_db)):
             "chat_id": m.chat_id,
             "sender_id": m.sender_id,
             "message": m.message,
-            "created_at": m.created_at
+            "created_at": m.created_at,
+            "username": m.sender.username  # เพิ่ม username
         }
         for m in messages
     ]

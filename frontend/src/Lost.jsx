@@ -27,7 +27,8 @@ const Lost = ({ currentUserId }) => {
     fetchLostItems();
   }, [currentUserId]);
 
-  const handleChat = async (otherUserId, itemId) => {
+  // เรียก API เพื่อสร้างหรือดึง chat
+  const handleChat = async (otherUserId, itemId, ownerUsername, itemImage, itemTitle) => { 
     try {
       const res = await fetch("http://localhost:8000/api/chats/get-or-create", {
         method: "POST",
@@ -35,20 +36,22 @@ const Lost = ({ currentUserId }) => {
         body: JSON.stringify({
           user1_id: currentUserId,
           user2_id: otherUserId,
-          item_id: itemId, // ส่ง item_id เพื่อให้ backend ดึง image
+          item_id: itemId,
         }),
       });
 
       if (!res.ok) throw new Error("Failed to start chat");
 
       const chat = await res.json();
-      // chat จะมี chat_id, item_image, item_title
+
+      // ส่ง ownerUsername ให้ ChatPage header
       navigate(`/chat/${chat.chat_id}`, {
         state: {
           currentUserId,
           otherUserId,
-          itemImage: chat.item_image,
-          itemTitle: chat.item_title,
+          itemImage,        // รูป item
+          itemTitle,        // ชื่อ item
+          ownerUsername,    // username เจ้าของ item
         },
       });
     } catch (error) {
@@ -103,8 +106,14 @@ const Lost = ({ currentUserId }) => {
                     User: {item.username}
                   </p>
                   <div className="mt-auto">
-                    <button
-                      onClick={() => handleChat(item.user_id, item.id)}
+                    <button  
+                      onClick={() => handleChat(
+                        item.user_id,
+                        item.id,
+                        item.username,  // ownerUsername
+                        item.image_data, 
+                        item.title
+                      )}
                       className="w-full py-2 rounded-lg font-semibold text-white 
                                 bg-gradient-to-r from-green-500 to-emerald-600 
                                 hover:from-green-600 hover:to-emerald-700 transition-all"
