@@ -67,6 +67,8 @@ class MessageOut(MessageBase):
     id: int
     sender_id: int
     created_at: datetime
+    username: Optional[str] = None        # ชื่อผู้ส่ง
+    image_data: Optional[str] = None 
 
     class Config:
         from_attributes = True
@@ -100,6 +102,7 @@ class ChatDetail(ChatOut):
 class ChatCreateRequest(BaseModel):
     user1_id: int
     user2_id: int
+    item_id: Optional[int] = None 
 
 class MessageSendRequest(BaseModel):
     chat_id: int

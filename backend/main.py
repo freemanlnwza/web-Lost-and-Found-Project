@@ -33,30 +33,15 @@ app.add_middleware(
 )
 
 # ---------------------------
-# Detect frame
+# Helper
 # ---------------------------
-@app.post("/detect-frame")
-async def detect_frame(image: UploadFile = File(...)):
-    image_bytes = await image.read()
-    pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-
-    results = yolo_model.predict(pil_image)
-    detections = []
-    if results and len(results[0].boxes) > 0:
-        for box in results[0].boxes:
-            x1, y1, x2, y2 = box.xyxy[0].tolist()
-            conf = float(box.conf[0])
-            cls = int(box.cls[0])
-            label = results[0].names[cls]
-            detections.append({
-                "x1": x1, "y1": y1, "x2": x2, "y2": y2,
-                "confidence": conf, "label": label
-            })
-
-    return {"detections": detections}
+def encode_image(data, content_type):
+    if data:
+        return f"data:{content_type};base64,{base64.b64encode(data).decode()}"
+    return None
 
 # ---------------------------
-# Register
+# Register/Login
 # ---------------------------
 @app.post("/register", response_model=schemas.UserOut)
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -65,9 +50,6 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Username นี้ถูกใช้ไปแล้ว")
     return crud.create_user(db=db, user=user)
 
-# ---------------------------
-# Login
-# ---------------------------
 @app.post("/login", response_model=schemas.UserOut)
 def login_user(
     username: str = Form(...),
@@ -91,28 +73,18 @@ async def upload_item(
     user_id: int = Form(...),
     db: Session = Depends(get_db)
 ):
-    print(f"[DEBUG] Upload: {title=} {type=} {category=} {user_id=} filename={image.filename}")
-
     if not image.filename.lower().endswith((".jpg", ".jpeg", ".png")):
         raise HTTPException(status_code=400, detail="File must be an image (jpg, jpeg, png)")
+    image_bytes = await image.read()
+    if len(image_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Empty image file")
 
-    try:
-        image_bytes = await image.read()
-        if len(image_bytes) == 0:
-            raise HTTPException(status_code=400, detail="Empty image file")
-        pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Cannot process image: {e}")
-
-    try:
-        results = yolo_model.predict(pil_image)
-        boxed_image = results[0].plot()
-        boxed_io = io.BytesIO()
-        Image.fromarray(boxed_image).save(boxed_io, format="JPEG")
-        boxed_image_bytes = boxed_io.getvalue()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"YOLO detection failed: {e}")
-
+    pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    results = yolo_model.predict(pil_image)
+    boxed_image = results[0].plot()
+    boxed_io = io.BytesIO()
+    Image.fromarray(boxed_image).save(boxed_io, format="JPEG")
+    boxed_image_bytes = boxed_io.getvalue()
     image.file.seek(0)
 
     item_in = schemas.ItemCreate(title=title, type=type, category=category)
@@ -124,16 +96,13 @@ async def upload_item(
         boxed_image_data=boxed_image_bytes
     )
 
-    def encode_img(data):
-        return f"data:{item.image_content_type};base64,{base64.b64encode(data).decode()}"
-
     return schemas.ItemOut(
         id=item.id,
         title=item.title,
         type=item.type,
         category=item.category,
-        image_data=encode_img(item.image_data),
-        boxed_image_data=encode_img(item.boxed_image_data) if item.boxed_image_data else None,
+        image_data=encode_image(item.image_data, item.image_content_type),
+        boxed_image_data=encode_image(item.boxed_image_data, item.image_content_type),
         image_filename=item.image_filename,
         user_id=item.user_id,
         username=item.user.username if item.user else None
@@ -147,9 +116,12 @@ def get_lost_items(db: Session = Depends(get_db)):
     items = crud.get_items(db, type_filter="lost")
     return [
         schemas.ItemOut(
-            id=i.id, title=i.title, type=i.type, category=i.category,
-            image_data=f"data:{i.image_content_type};base64,{base64.b64encode(i.image_data).decode()}",
-            boxed_image_data=f"data:{i.image_content_type};base64,{base64.b64encode(i.boxed_image_data).decode()}" if i.boxed_image_data else None,
+            id=i.id,
+            title=i.title,
+            type=i.type,
+            category=i.category,
+            image_data=encode_image(i.image_data, i.image_content_type),
+            boxed_image_data=encode_image(i.boxed_image_data, i.image_content_type),
             image_filename=i.image_filename,
             user_id=i.user_id,
             username=i.user.username if i.user else None
@@ -161,9 +133,12 @@ def get_found_items(db: Session = Depends(get_db)):
     items = crud.get_items(db, type_filter="found")
     return [
         schemas.ItemOut(
-            id=i.id, title=i.title, type=i.type, category=i.category,
-            image_data=f"data:{i.image_content_type};base64,{base64.b64encode(i.image_data).decode()}",
-            boxed_image_data=f"data:{i.image_content_type};base64,{base64.b64encode(i.boxed_image_data).decode()}" if i.boxed_image_data else None,
+            id=i.id,
+            title=i.title,
+            type=i.type,
+            category=i.category,
+            image_data=encode_image(i.image_data, i.image_content_type),
+            boxed_image_data=encode_image(i.boxed_image_data, i.image_content_type),
             image_filename=i.image_filename,
             user_id=i.user_id,
             username=i.user.username if i.user else None
@@ -171,7 +146,7 @@ def get_found_items(db: Session = Depends(get_db)):
     ]
 
 # ---------------------------
-# Search by text or image
+# Search Items
 # ---------------------------
 @app.post("/search", response_model=list[schemas.ItemOut])
 async def search_items(
@@ -183,77 +158,76 @@ async def search_items(
     if not text and not image:
         raise HTTPException(status_code=400, detail="Provide text or image for search")
 
-    try:
-        if text:
-            query_emb = get_text_embedding(text)
-            field = models.Item.text_embedding
-        else:
-            image_bytes = await image.read()
-            query_emb = get_image_embedding(image_bytes)
-            field = models.Item.image_embedding
+    if text:
+        query_emb = get_text_embedding(text)
+        field = models.Item.text_embedding
+    else:
+        image_bytes = await image.read()
+        query_emb = get_image_embedding(image_bytes)
+        field = models.Item.image_embedding
 
-        items = (
-            db.query(models.Item)
-            .order_by(field.l2_distance(query_emb))
-            .limit(top_k)
-            .all()
-        )
+    items = db.query(models.Item).order_by(field.l2_distance(query_emb)).limit(top_k).all()
 
-        def cosine_similarity(a, b):
-            a, b = np.array(a), np.array(b)
-            denom = (np.linalg.norm(a) * np.linalg.norm(b))
-            return float(np.dot(a, b) / denom) if denom != 0 else 0.0
+    def cosine_similarity(a, b):
+        a, b = np.array(a), np.array(b)
+        denom = (np.linalg.norm(a) * np.linalg.norm(b))
+        return float(np.dot(a, b) / denom) if denom != 0 else 0.0
 
-        results = []
-        for i in items:
-            item_emb = i.text_embedding if text else i.image_embedding
-            sim = cosine_similarity(query_emb, item_emb)
-
-            results.append({
-                "id": i.id,
-                "title": i.title,
-                "type": i.type,
-                "category": i.category,
-                "image_data": f"data:{i.image_content_type};base64,{base64.b64encode(i.image_data).decode()}" if i.image_data else None,
-                "boxed_image_data": f"data:{i.image_content_type};base64,{base64.b64encode(i.boxed_image_data).decode()}" if i.boxed_image_data else None,
-                "image_filename": i.image_filename,
-                "user_id": i.user_id,
-                "username": i.user.username if i.user else None,
-                "similarity": round(sim, 4),
-                "query_vector_first2": query_emb[:2] if len(query_emb) >= 2 else query_emb,
-                "item_vector_first2": item_emb[:2] if len(item_emb) >= 2 else item_emb,
-            })
-
-        return results
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search failed: {e}")
+    results = []
+    for i in items:
+        item_emb = i.text_embedding if text else i.image_embedding
+        sim = cosine_similarity(query_emb, item_emb)
+        results.append({
+            "id": i.id,
+            "title": i.title,
+            "type": i.type,
+            "category": i.category,
+            "image_data": encode_image(i.image_data, i.image_content_type),
+            "boxed_image_data": encode_image(i.boxed_image_data, i.image_content_type),
+            "image_filename": i.image_filename,
+            "user_id": i.user_id,
+            "username": i.user.username if i.user else None,
+            "similarity": round(sim, 4)
+        })
+    return results
 
 # ---------------------------
-# Chats API (JSON)
+# Chats API
 # ---------------------------
 @app.post("/api/chats/get-or-create")
-def get_or_create_chat(req: ChatCreateRequest, db: Session = Depends(get_db)):
-    chat = crud.get_or_create_chat(db, user1_id=req.user1_id, user2_id=req.user2_id)
+def get_or_create_chat(req: schemas.ChatCreateRequest, db: Session = Depends(get_db)):
+    chat = crud.get_or_create_chat(db, req.user1_id, req.user2_id, getattr(req, "item_id", None))
+    
+    # encode image if exists
+    item_image = encode_image(chat.item.image_data, chat.item.image_content_type) if chat.item else None
+    
     return {
         "chat_id": chat.id,
         "user1_id": chat.user1_id,
         "user2_id": chat.user2_id,
         "created_at": chat.created_at,
+        "item_image": item_image,
+        "item_title": chat.item.title if chat.item else None
     }
 
 @app.get("/api/chats/{user_id}")
 def get_user_chats(user_id: int, db: Session = Depends(get_db)):
     chats = crud.get_chats_for_user(db, user_id=user_id)
-    return [
-        {
+    result = []
+    for c in chats:
+        result.append({
             "chat_id": c.id,
             "user1_id": c.user1_id,
             "user2_id": c.user2_id,
             "created_at": c.created_at,
-        } for c in chats
-    ]
+            "item_image": encode_image(c.item.image_data, c.item.image_content_type) if c.item else None,
+            "item_title": c.item.title if c.item else None
+        })
+    return result
 
+# ---------------------------
+# Messages API (ไม่มี username และ image)
+# ---------------------------
 @app.get("/api/chats/{chat_id}/messages")
 def get_chat_messages(chat_id: int, db: Session = Depends(get_db)):
     messages = crud.get_messages_by_chat(db, chat_id)
@@ -263,12 +237,13 @@ def get_chat_messages(chat_id: int, db: Session = Depends(get_db)):
             "chat_id": m.chat_id,
             "sender_id": m.sender_id,
             "message": m.message,
-            "created_at": m.created_at,
-        } for m in messages
+            "created_at": m.created_at
+        }
+        for m in messages
     ]
 
 @app.post("/api/messages/send")
-def send_message(req: MessageSendRequest, db: Session = Depends(get_db)):
+def send_message(req: schemas.MessageSendRequest, db: Session = Depends(get_db)):
     msg_in = MessageCreate(chat_id=req.chat_id, sender_id=req.sender_id, message=req.message)
     msg = crud.create_message(db, msg_in)
     return {
@@ -276,5 +251,5 @@ def send_message(req: MessageSendRequest, db: Session = Depends(get_db)):
         "chat_id": msg.chat_id,
         "sender_id": msg.sender_id,
         "message": msg.message,
-        "created_at": msg.created_at,
+        "created_at": msg.created_at
     }
