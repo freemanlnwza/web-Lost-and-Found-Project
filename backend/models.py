@@ -47,17 +47,14 @@ class Chat(Base):
     __tablename__ = "chats"
     
     id = Column(Integer, primary_key=True, index=True)
-
-    # 👇 เพิ่ม ForeignKey ชี้ไปยัง users.id
     user1_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user2_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=True)  # เพิ่ม optional
     created_at = Column(DateTime(timezone=False), server_default=func.now())
 
-    # 👇 เพิ่มความสัมพันธ์กับ User
     user1 = relationship("User", foreign_keys=[user1_id], back_populates="chats_as_user1")
     user2 = relationship("User", foreign_keys=[user2_id], back_populates="chats_as_user2")
-
+    item = relationship("Item")  # เพื่อดึงรูปภาพถ้า chat เกี่ยวข้อง
     messages = relationship("Message", back_populates="chat", cascade="all, delete")
 
 # Message Model

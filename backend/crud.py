@@ -1,9 +1,12 @@
+import base64
 from sqlalchemy.orm import Session, joinedload
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import models
 from models import User, Item, Chat, Message
 from schemas import UserCreate, ItemCreate, MessageCreate
 import bcrypt
 import io
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 from typing import Optional, List
 from utils import get_text_embedding, get_image_embedding
 from datetime import datetime
@@ -19,10 +22,8 @@ def create_user(db: Session, user: UserCreate) -> User:
     db.refresh(db_user)
     return db_user
 
-
 def get_user_by_username(db: Session, username: str) -> Optional[User]:
     return db.query(User).filter(User.username == username).first()
-
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
     user = get_user_by_username(db, username)
@@ -31,7 +32,6 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
     if not bcrypt.checkpw(password.encode(), user.password.encode()):
         return None
     return user
-
 
 # ===========================
 # Item
@@ -45,7 +45,7 @@ def create_item(
 ) -> Item:
     image_bytes = image_file.file.read()
     image_file.file.seek(0)
-    
+
     text_emb = get_text_embedding(item.title).tolist()
     image_emb = get_image_embedding(io.BytesIO(image_bytes)).tolist()
 
@@ -66,22 +66,20 @@ def create_item(
     db.refresh(db_item)
     return db_item
 
-
 def get_items(db: Session, type_filter: Optional[str] = None) -> List[Item]:
-    """ดึง item ทั้งหมดหรือกรองตาม type พร้อม join user เพื่อดึง username"""
     query = db.query(Item).options(joinedload(Item.user))
     if type_filter:
         query = query.filter(Item.type == type_filter)
     return query.all()
 
-
 # ===========================
 # Chat
 # ===========================
-def get_or_create_chat(db: Session, user1_id: int, user2_id: int) -> Chat:
-    """ดึงห้องแชทระหว่าง user1 กับ user2 ถ้าไม่มีให้สร้างใหม่"""
+def get_or_create_chat(db: Session, user1_id: int, user2_id: int, item_id: int = None) -> Chat:
+    """ดึง chat ระหว่าง user1 กับ user2 ถ้าไม่มีสร้างใหม่ ถ้ามีแล้วแต่ item_id ยังว่างให้อัปเดต"""
     chat = (
         db.query(Chat)
+        .options(joinedload(Chat.item))
         .filter(
             ((Chat.user1_id == user1_id) & (Chat.user2_id == user2_id)) |
             ((Chat.user1_id == user2_id) & (Chat.user2_id == user1_id))
@@ -90,32 +88,37 @@ def get_or_create_chat(db: Session, user1_id: int, user2_id: int) -> Chat:
     )
 
     if chat:
+        if item_id and chat.item_id is None:
+            chat.item_id = item_id
+            db.commit()
+            db.refresh(chat)
         return chat
 
-    chat = Chat(user1_id=user1_id, user2_id=user2_id, created_at=datetime.utcnow())
+    chat = Chat(
+        user1_id=user1_id,
+        user2_id=user2_id,
+        item_id=item_id,
+        created_at=datetime.utcnow()
+    )
     db.add(chat)
     db.commit()
     db.refresh(chat)
     return chat
 
-
 def get_chats_for_user(db: Session, user_id: int) -> List[Chat]:
-    """ดึงห้องแชททั้งหมดที่ user มีส่วนร่วม"""
     chats = (
         db.query(Chat)
-        .options(joinedload(Chat.user1), joinedload(Chat.user2))
+        .options(joinedload(Chat.user1), joinedload(Chat.user2), joinedload(Chat.item))
         .filter((Chat.user1_id == user_id) | (Chat.user2_id == user_id))
         .order_by(Chat.created_at.desc())
         .all()
     )
     return chats
 
-
 # ===========================
 # Message
 # ===========================
 def create_message(db: Session, msg: MessageCreate) -> Message:
-    """สร้างข้อความใหม่"""
     db_msg = Message(
         chat_id=msg.chat_id,
         sender_id=msg.sender_id,
@@ -127,12 +130,53 @@ def create_message(db: Session, msg: MessageCreate) -> Message:
     db.refresh(db_msg)
     return db_msg
 
-
 def get_messages_by_chat(db: Session, chat_id: int) -> List[Message]:
-    """ดึงข้อความทั้งหมดในห้อง"""
-    return (
+    messages = (
         db.query(Message)
         .filter(Message.chat_id == chat_id)
         .order_by(Message.created_at.asc())
         .all()
     )
+    return messages
+
+# ===========================
+# Helper
+# ===========================
+# ลบ encode_image ออกเพราะไม่ใช้แล้ว
+def is_user_in_chat(db: Session, chat_id: int, user_id: int) -> bool:
+    chat = db.query(Chat).filter(Chat.id == chat_id).first()
+    if not chat:
+        return False
+    return user_id in [chat.user1_id, chat.user2_id]
+
+def encode_image(data, content_type):
+    if data:
+        return f"data:{content_type};base64,{base64.b64encode(data).decode()}"
+    return None
+
+def get_admin_user(credentials: Optional[HTTPAuthorizationCredentials], db: Session):
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    try:
+        user_id = int(credentials.credentials)
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        if not hasattr(user, 'role') or user.role != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        return user
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+def log_admin_action(db: Session, admin_id: int, admin_username: str, action: str):
+    try:
+        log = models.AdminLog(
+            admin_id=admin_id,
+            admin_username=admin_username,
+            action=action,
+            timestamp=datetime.now()
+        )
+        db.add(log)
+        db.commit()
+    except Exception as e:
+        print(f"Failed to log admin action: {e}")

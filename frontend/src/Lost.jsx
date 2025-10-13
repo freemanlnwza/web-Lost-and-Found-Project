@@ -12,7 +12,12 @@ const Lost = ({ currentUserId }) => {
       try {
         const res = await fetch("http://localhost:8000/api/lost-items");
         const data = await res.json();
-        setItems(data);
+
+        // กรองโพสต์ของตัวเองออก
+        const filteredItems = data.filter(
+          (item) => item.user_id !== currentUserId
+        );
+        setItems(filteredItems);
       } catch (error) {
         console.error("Error fetching lost items:", error);
       } finally {
@@ -21,9 +26,10 @@ const Lost = ({ currentUserId }) => {
     };
 
     fetchLostItems();
-  }, []);
+  }, [currentUserId]);
 
-  const handleChat = async (otherUserId) => {
+  // เรียก API เพื่อสร้างหรือดึง chat
+  const handleChat = async (otherUserId, itemId, ownerUsername, itemImage, itemTitle) => { 
     try {
       const res = await fetch("http://localhost:8000/api/chats/get-or-create", {
         method: "POST",
@@ -31,14 +37,23 @@ const Lost = ({ currentUserId }) => {
         body: JSON.stringify({
           user1_id: currentUserId,
           user2_id: otherUserId,
+          item_id: itemId,
         }),
       });
 
       if (!res.ok) throw new Error("Failed to start chat");
 
       const chat = await res.json();
+
+      // ส่ง ownerUsername ให้ ChatPage header
       navigate(`/chat/${chat.chat_id}`, {
-        state: { currentUserId, otherUserId },
+        state: {
+          currentUserId,
+          otherUserId,
+          itemImage,        // รูป item
+          itemTitle,        // ชื่อ item
+          ownerUsername,    // username เจ้าของ item
+        },
       });
     } catch (error) {
       console.error("Error starting chat:", error);
@@ -158,26 +173,26 @@ const Lost = ({ currentUserId }) => {
                       </div>
                     )}
                   </div>
-
-                  {/* Chat Button */}
-                  <button
-                    onClick={() => handleChat(item.user_id)}
-                    className="w-full mt-4 py-3 px-4 rounded-xl font-semibold text-white 
-                               bg-gradient-to-r from-blue-500 to-purple-600 
-                               hover:from-blue-600 hover:to-purple-700 
-                               shadow-lg hover:shadow-blue-500/50
-                               transform hover:scale-105 active:scale-95
-                               transition-all duration-200
-                               flex items-center justify-center space-x-2"
-                  >
-                    <MessageCircle size={18} />
-                    <span>Start Chat</span>
-                  </button>
-                </div>
-
-                {/* Shine Effect on Hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
+                  <p className="text-gray-400 mb-2">Category: {item.category}</p>
+                  <p className="text-gray-300 font-medium mb-4">
+                    User: {item.username}
+                  </p>
+                  <div className="mt-auto">
+                    <button  
+                      onClick={() => handleChat(
+                        item.user_id,
+                        item.id,
+                        item.username,  // ownerUsername
+                        item.image_data, 
+                        item.title
+                      )}
+                      className="w-full py-2 rounded-lg font-semibold text-white 
+                                bg-gradient-to-r from-green-500 to-emerald-600 
+                                hover:from-green-600 hover:to-emerald-700 transition-all"
+                    >
+                      💬 Chat
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
