@@ -140,3 +140,8 @@ def get_messages_by_chat(db: Session, chat_id: int) -> List[Message]:
 # Helper
 # ===========================
 # ลบ encode_image ออกเพราะไม่ใช้แล้ว
+def is_user_in_chat(db: Session, chat_id: int, user_id: int) -> bool:
+    chat = db.query(Chat).filter(Chat.id == chat_id).first()
+    if not chat:
+        return False
+    return user_id in [chat.user1_id, chat.user2_id]

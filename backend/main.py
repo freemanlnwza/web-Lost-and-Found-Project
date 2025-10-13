@@ -234,7 +234,19 @@ def get_user_chats(user_id: int, db: Session = Depends(get_db)):
 # Messages API (ไม่มี username และ image)
 # ---------------------------
 @app.get("/api/chats/{chat_id}/messages")
-def get_chat_messages(chat_id: int, db: Session = Depends(get_db)):
+def get_chat_messages(chat_id: int, user_id: int, db: Session = Depends(get_db)):
+    """
+    เพิ่มพารามิเตอร์ user_id ใน query string เพื่อใช้ตรวจสอบว่า user นี้อยู่ในห้องหรือไม่
+    ตัวอย่าง: /api/chats/4/messages?user_id=2
+    """
+    chat = db.query(models.Chat).filter(models.Chat.id == chat_id).first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="ไม่พบห้องแชทนี้")
+
+    # ตรวจสอบว่า user_id อยู่ในห้องไหม
+    if user_id not in [chat.user1_id, chat.user2_id]:
+        raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์เข้าถึงห้องนี้")
+
     messages = crud.get_messages_by_chat(db, chat_id)
     return [
         {
@@ -243,15 +255,24 @@ def get_chat_messages(chat_id: int, db: Session = Depends(get_db)):
             "sender_id": m.sender_id,
             "message": m.message,
             "created_at": m.created_at,
-            "username": m.sender.username  # เพิ่ม username
+            "username": m.sender.username
         }
         for m in messages
     ]
 
+
 @app.post("/api/messages/send")
-def send_message(req: schemas.MessageSendRequest, db: Session = Depends(get_db)):
+def send_message(req: MessageSendRequest, db: Session = Depends(get_db)):
+    chat = db.query(models.Chat).filter(models.Chat.id == req.chat_id).first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="ไม่พบห้องแชทนี้")
+
+    if not crud.is_user_in_chat(db, req.chat_id, req.sender_id):
+        raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์ในห้องนี้")
+
     msg_in = MessageCreate(chat_id=req.chat_id, sender_id=req.sender_id, message=req.message)
     msg = crud.create_message(db, msg_in)
+
     return {
         "id": msg.id,
         "chat_id": msg.chat_id,
