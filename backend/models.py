@@ -1,7 +1,10 @@
 from database import Base
 from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, DateTime, func, Text
 from sqlalchemy.orm import relationship
+from database import Base
+from datetime import datetime
 from pgvector.sqlalchemy import Vector
+
 
 class User(Base):
     __tablename__ = "users"
@@ -9,6 +12,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
+    role = Column(String(20), default="user")
 
     items = relationship("Item", back_populates="user")
 
@@ -16,6 +20,7 @@ class User(Base):
     sent_messages = relationship("Message", back_populates="sender", cascade="all, delete")
     chats_as_user1 = relationship("Chat", foreign_keys="Chat.user1_id", back_populates="user1")
     chats_as_user2 = relationship("Chat", foreign_keys="Chat.user2_id", back_populates="user2")
+    admin_logs = relationship("AdminLog", back_populates="admin")
 
 
 class Item(Base):
@@ -37,10 +42,10 @@ class Item(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user = relationship("User", back_populates="items")
 
-
+# Chat Model
 class Chat(Base):
     __tablename__ = "chats"
-
+    
     id = Column(Integer, primary_key=True, index=True)
 
     # 👇 เพิ่ม ForeignKey ชี้ไปยัง users.id
@@ -55,10 +60,10 @@ class Chat(Base):
 
     messages = relationship("Message", back_populates="chat", cascade="all, delete")
 
-
+# Message Model
 class Message(Base):
     __tablename__ = "messages"
-
+    
     id = Column(Integer, primary_key=True, index=True)
     chat_id = Column(Integer, ForeignKey("chats.id", ondelete="CASCADE"))
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -67,3 +72,15 @@ class Message(Base):
 
     chat = relationship("Chat", back_populates="messages")
     sender = relationship("User", back_populates="sent_messages")
+
+# AdminLog Model
+class AdminLog(Base):
+    __tablename__ = "admin_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    admin_username = Column(String(100), nullable=False)
+    action = Column(Text, nullable=False)
+    timestamp = Column(DateTime(timezone=False), server_default=func.now())
+    
+    admin = relationship("User", back_populates="admin_logs")

@@ -1,5 +1,142 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
+
+// ✅ Beautiful Popup Component
+const Popup = ({ type = "success", message, onClose, uploadedItem }) => {
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl shadow-2xl max-w-2xl w-full mx-4 border border-gray-700 transform animate-scale-in overflow-hidden">
+        {/* Header */}
+        <div className={`p-6 ${
+          type === "success" ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20" :
+          type === "error" ? "bg-gradient-to-r from-red-500/20 to-rose-500/20" :
+          "bg-gradient-to-r from-yellow-500/20 to-orange-500/20"
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              {type === "success" ? (
+                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <CheckCircle className="text-green-400" size={28} />
+                </div>
+              ) : type === "error" ? (
+                <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                  <XCircle className="text-red-400" size={28} />
+                </div>
+              ) : (
+                <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                  <AlertCircle className="text-yellow-400" size={28} />
+                </div>
+              )}
+              <h2 className={`text-2xl font-bold ${
+                type === "success" ? "text-green-400" :
+                type === "error" ? "text-red-400" :
+                "text-yellow-400"
+              }`}>
+                {type === "success" ? "Success!" : type === "error" ? "Error" : "Notice"}
+              </h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <XCircle size={24} />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {uploadedItem ? (
+            <div className="space-y-4">
+              {Array.isArray(uploadedItem) ? (
+                uploadedItem.map((item, idx) => (
+                  <div key={idx} className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                    <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                      <div>
+                        <p className="text-gray-400">Title</p>
+                        <p className="text-white font-semibold">{item.title}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Type</p>
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                          item.type === "lost" 
+                            ? "bg-red-500/20 text-red-400" 
+                            : "bg-green-500/20 text-green-400"
+                        }`}>
+                          {item.type}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Category</p>
+                        <p className="text-white font-semibold">{item.category}</p>
+                      </div>
+                    </div>
+                    {item.boxed_image_data && (
+                      <img
+                        src={item.boxed_image_data}
+                        alt="Detected result"
+                        className="w-full rounded-lg object-contain bg-gray-900"
+                      />
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                  <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                    <div>
+                      <p className="text-gray-400">Title</p>
+                      <p className="text-white font-semibold">{uploadedItem.title}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Type</p>
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                        uploadedItem.type === "lost" 
+                          ? "bg-red-500/20 text-red-400" 
+                          : "bg-green-500/20 text-green-400"
+                      }`}>
+                        {uploadedItem.type}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Category</p>
+                      <p className="text-white font-semibold">{uploadedItem.category}</p>
+                    </div>
+                  </div>
+                  {uploadedItem.boxed_image_data && (
+                    <img
+                      src={uploadedItem.boxed_image_data}
+                      alt="Detected result"
+                      className="w-full rounded-lg object-contain bg-gray-900"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-gray-300 text-center">{message}</p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 bg-gray-800/50 border-t border-gray-700">
+          <button
+            onClick={onClose}
+            className={`w-full py-3 rounded-xl font-semibold text-white transition-all transform hover:scale-105 active:scale-95 ${
+              type === "success"
+                ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg shadow-green-500/50"
+                : type === "error"
+                ? "bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 shadow-lg shadow-red-500/50"
+                : "bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 shadow-lg shadow-yellow-500/50"
+            }`}
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const UploadPage = () => {
   const navigate = useNavigate();
@@ -15,6 +152,7 @@ const UploadPage = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [showPopup, setShowPopup] = useState(false);
+  const [popupType, setPopupType] = useState("success"); // ✅ เพิ่ม
   const [popupMessage, setPopupMessage] = useState("");
   const [showMessagePopup, setShowMessagePopup] = useState(false);
 
@@ -36,6 +174,7 @@ const UploadPage = () => {
           })
           .catch(() => {
             setPopupMessage("Image can't upload, please try new Image.");
+            setPopupType("error"); // ✅ เพิ่ม
             setShowMessagePopup(true);
           });
       } else {
@@ -50,6 +189,7 @@ const UploadPage = () => {
   const requireLogin = () => {
     if (!isAuthenticated) {
       setPopupMessage("⚠ Login required to continue.");
+      setPopupType("warning"); // ✅ เพิ่ม
       setShowMessagePopup(true);
       navigate("/login");
       return false;
@@ -72,6 +212,7 @@ const UploadPage = () => {
         })
         .catch(() => {
           setPopupMessage("Image can't upload, please try new Image.");
+          setPopupType("error"); // ✅ เพิ่ม
           setShowMessagePopup(true);
         });
     } else {
@@ -127,6 +268,7 @@ const UploadPage = () => {
         setUploadedImage(imageFile);
       } catch (err) {
         setPopupMessage("Image can't upload, please try new Image.");
+        setPopupType("error"); // ✅ เพิ่ม
         setShowMessagePopup(true);
         return;
       }
@@ -134,6 +276,7 @@ const UploadPage = () => {
 
     if (!imageFile || !message || !selectedType || !category) {
       setPopupMessage("Please complete all fields and select an item category.");
+      setPopupType("warning"); // ✅ เพิ่ม
       setShowMessagePopup(true);
       return;
     }
@@ -154,48 +297,50 @@ const UploadPage = () => {
 
       if (!res.ok) {
         setPopupMessage("Image can't upload, please try new Image.");
+        setPopupType("error"); // ✅ เพิ่ม
         setShowMessagePopup(true);
         return;
       }
 
       const data = await res.json();
       setUploadedItem(data);
+      setPopupType("success"); // ✅ เพิ่ม
       setShowPopup(true);
       resetForm();
     } catch (error) {
       setPopupMessage("Image can't upload, please try new Image.");
+      setPopupType("error"); // ✅ เพิ่ม
       setShowMessagePopup(true);
     }
   };
 
   // ===================== Fetch Found Items =====================
-const fetchFoundItems = async () => {
-  if (!requireLogin()) return;
+  const fetchFoundItems = async () => {
+    if (!requireLogin()) return;
 
-  try {
-    const formData = new FormData();
-    if (message) formData.append("text", message);
-    if (uploadedImage) formData.append("image", uploadedImage);
+    try {
+      const formData = new FormData();
+      if (message) formData.append("text", message);
+      if (uploadedImage) formData.append("image", uploadedImage);
 
-    const res = await fetch("http://localhost:8000/search", {
-      method: "POST",
-      body: formData,
-    });
+      const res = await fetch("http://localhost:8000/search", {
+        method: "POST",
+        body: formData,
+      });
 
-    if (!res.ok) {
-      throw new Error("Search failed");
+      if (!res.ok) {
+        throw new Error("Search failed");
+      }
+
+      const data = await res.json();
+      navigate("/searchItem", { state: { foundItems: data } });
+
+    } catch (err) {
+      setPopupMessage("Search failed, please try again.");
+      setPopupType("error"); // ✅ เพิ่ม
+      setShowMessagePopup(true);
     }
-
-    const data = await res.json();
-
-    // ✅ แทนที่จะ show popup -> ไปหน้าใหม่ /result พร้อมส่ง data
-    navigate("/searchItem", { state: { foundItems: data } });
-
-  } catch (err) {
-    setPopupMessage("Search failed, please try again.");
-    setShowMessagePopup(true);
-  }
-};
+  };
 
   // ===================== UI =====================
   return (
@@ -298,7 +443,7 @@ const fetchFoundItems = async () => {
 
           <button
             type="button"
-            onClick={fetchFoundItems} // เรียก endpoint /search
+            onClick={fetchFoundItems}
             disabled={!isAuthenticated}
             className={`py-3 rounded-xl font-semibold text-sm sm:text-base transition-all ${
               !isAuthenticated
@@ -321,65 +466,40 @@ const fetchFoundItems = async () => {
         </button>
 
         {/* Popups */}
-        {showPopup && uploadedItem && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full text-center relative">
-              <button
-                onClick={() => setShowPopup(false)}
-                className="absolute top-2 right-2 text-gray-500 hover:text-black"
-              >
-                ✕
-              </button>
-              <h2 className="text-xl font-bold text-black">✅ Result</h2>
-              <div className="mt-3 text-center text-gray-800">
-                {Array.isArray(uploadedItem) ? (
-                  uploadedItem.map((item, idx) => (
-                    <div key={idx} className="mb-3">
-                      <p><strong>Title:</strong> {item.title}</p>
-                      <p><strong>Type:</strong> {item.type}</p>
-                      <p><strong>Category:</strong> {item.category}</p>
-                      {item.boxed_image_data && (
-                        <img
-                          src={item.boxed_image_data}
-                          alt="Detected result"
-                          className="mx-auto mt-1 rounded-lg w-64 h-48 object-contain"
-                        />
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <>
-                    <p><strong>Title:</strong> {uploadedItem.title}</p>
-                    <p><strong>Type:</strong> {uploadedItem.type}</p>
-                    <p><strong>Category:</strong> {uploadedItem.category}</p>
-                    {uploadedItem.boxed_image_data && (
-                      <img
-                        src={uploadedItem.boxed_image_data}
-                        alt="Detected result"
-                        className="mx-auto mt-1 rounded-lg w-64 h-48 object-contain"
-                      />
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+        {showPopup && (
+          <Popup
+            type={popupType}
+            uploadedItem={uploadedItem}
+            onClose={() => setShowPopup(false)}
+          />
         )}
 
         {showMessagePopup && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-            <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center relative">
-              <button
-                onClick={() => setShowMessagePopup(false)}
-                className="absolute top-2 right-2 text-gray-500 hover:text-black"
-              >
-                ✕
-              </button>
-              <p className="text-black">{popupMessage}</p>
-            </div>
-          </div>
+          <Popup
+            type={popupType}
+            message={popupMessage}
+            onClose={() => setShowMessagePopup(false)}
+          />
         )}
       </div>
+
+      {/* ✅ Add animations */}
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scale-in {
+          from { transform: scale(0.9); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
+        .animate-scale-in {
+          animation: scale-in 0.3s ease-out;
+        }
+      `}</style>
     </main>
   );
 };
