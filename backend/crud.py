@@ -13,7 +13,7 @@ from datetime import datetime
 # ===========================
 def create_user(db: Session, user: UserCreate) -> User:
     hashed_pw = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode()
-    db_user = User(username=user.username, password=hashed_pw)
+    db_user = User(username=user.username, password=hashed_pw, role="user")
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
