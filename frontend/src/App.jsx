@@ -104,6 +104,7 @@ function App() {
         {shouldHideHeader ? (
           <Routes>
             <Route path="/camera" element={<CameraPage />} />
+            
           </Routes>
         ) : (
           <div className="w-full max-w-6xl text-black py-10">
