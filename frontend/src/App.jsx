@@ -11,6 +11,7 @@ import SearchPage from "./SearchPage.jsx";
 import GuideBook from "./GuideBook.jsx";
 import AdminPage from "./adminpage.jsx";
 import ListChat from "./ListChat.jsx";
+import EditPost from "./EditPost.jsx"; // ✅ Add this import
 
 function AppWrapper() {
   return (
@@ -130,6 +131,8 @@ function App() {
               <Route path="/guidebook" element={<GuideBook />} />
               <Route path="/adminpage" element={<AdminPage />} />
               <Route path="/chats" element={<ListChat currentUserId={currentUser?.id} />} />
+              <Route path="/edit-post/:id" element={<EditPost />} /> {/* ✅ Add this route */}
+
             </Routes>
           </div>
         )}
