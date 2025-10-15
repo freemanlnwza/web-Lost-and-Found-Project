@@ -82,7 +82,7 @@ const ChatPage = ({ currentUserId }) => {
     setInput("");
 
     try {
-      const res = await fetch("http://localhost:8000/api/messages/send", {
+      const res = await fetch("http://localhost:8000/api/chats/messages/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newMsg),
