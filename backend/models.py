@@ -1,83 +1,99 @@
 from database import Base
 from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, DateTime, func, Text
 from sqlalchemy.orm import relationship
-from database import Base
 from datetime import datetime
 from pgvector.sqlalchemy import Vector
 
-
+# ======================
+# User Model
+# ======================
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, nullable=False)
-    password = Column(String, nullable=False)
-    role = Column(String(20), default="user")
+    id = Column(Integer, primary_key=True, index=True)  # ID ของผู้ใช้
+    username = Column(String, unique=True, nullable=False)  # ชื่อผู้ใช้ ต้องไม่ซ้ำ
+    password = Column(String, nullable=False)  # รหัสผ่านที่เข้ารหัสแล้ว
+    role = Column(String(20), default="user")  # สิทธิ์ของผู้ใช้ เช่น user, admin
 
-    items = relationship("Item", back_populates="user", cascade="all, delete")
+    items = relationship("Item", back_populates="user", cascade="all, delete")  # รายการไอเท็มของผู้ใช้
 
-    # 👇 เพิ่ม
+    # ข้อความที่ผู้ใช้ส่ง
     sent_messages = relationship("Message", back_populates="sender", cascade="all, delete")
+    # แชทที่ผู้ใช้เป็น user1
     chats_as_user1 = relationship("Chat", foreign_keys="Chat.user1_id", back_populates="user1", cascade="all, delete")
+    # แชทที่ผู้ใช้เป็น user2
     chats_as_user2 = relationship("Chat", foreign_keys="Chat.user2_id", back_populates="user2", cascade="all, delete")
+    # บันทึกการทำงานของ admin
     admin_logs = relationship("AdminLog", back_populates="admin")
 
 
+# ======================
+# Item Model
+# ======================
 class Item(Base):
     __tablename__ = "items"
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    type = Column(String, nullable=False)
-    category = Column(String, nullable=False)
+    id = Column(Integer, primary_key=True, index=True)  # ID ของไอเท็ม
+    title = Column(String, nullable=False)  # ชื่อไอเท็ม
+    type = Column(String, nullable=False)  # lost หรือ found
+    category = Column(String, nullable=False)  # หมวดหมู่
 
-    image_data = Column(LargeBinary, nullable=False)
-    image_filename = Column(String, nullable=False)
-    image_content_type = Column(String, nullable=False)
-    boxed_image_data = Column(LargeBinary, nullable=True)
+    image_data = Column(LargeBinary, nullable=False)  # ไฟล์รูปไบต์ของไอเท็ม
+    image_filename = Column(String, nullable=False)  # ชื่อไฟล์
+    image_content_type = Column(String, nullable=False)  # ประเภทไฟล์ (MIME)
+    boxed_image_data = Column(LargeBinary, nullable=True)  # รูปพร้อมกรอบ (optional)
 
-    text_embedding = Column(Vector(512), nullable=True)
-    image_embedding = Column(Vector(512), nullable=True)
+    text_embedding = Column(Vector(512), nullable=True)  # embedding ของข้อความ
+    image_embedding = Column(Vector(512), nullable=True)  # embedding ของภาพ
 
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    user = relationship("User", back_populates="items")
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # ID ผู้โพสต์
+    user = relationship("User", back_populates="items")  # ความสัมพันธ์ไปยังผู้ใช้
 
+
+# ======================
 # Chat Model
+# ======================
 class Chat(Base):
     __tablename__ = "chats"
     
-    id = Column(Integer, primary_key=True, index=True)
-    user1_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    user2_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=True)  # เพิ่ม optional
-    created_at = Column(DateTime(timezone=False), server_default=func.now())
+    id = Column(Integer, primary_key=True, index=True)  # ID ห้องแชท
+    user1_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # ID ผู้ใช้คนที่ 1
+    user2_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # ID ผู้ใช้คนที่ 2
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=True)  # ID ไอเท็มที่เกี่ยวข้อง (optional)
+    created_at = Column(DateTime(timezone=False), server_default=func.now())  # เวลาสร้าง chat
 
-    user1 = relationship("User", foreign_keys=[user1_id], back_populates="chats_as_user1")
-    user2 = relationship("User", foreign_keys=[user2_id], back_populates="chats_as_user2")
-    item = relationship("Item")  # เพื่อดึงรูปภาพถ้า chat เกี่ยวข้อง
-    messages = relationship("Message", back_populates="chat", cascade="all, delete")
+    user1 = relationship("User", foreign_keys=[user1_id], back_populates="chats_as_user1")  # ความสัมพันธ์กับ user1
+    user2 = relationship("User", foreign_keys=[user2_id], back_populates="chats_as_user2")  # ความสัมพันธ์กับ user2
+    item = relationship("Item")  # ความสัมพันธ์กับไอเท็ม
+    messages = relationship("Message", back_populates="chat", cascade="all, delete")  # ข้อความใน chat
 
+
+# ======================
 # Message Model
+# ======================
 class Message(Base):
     __tablename__ = "messages"
     
-    id = Column(Integer, primary_key=True, index=True)
-    chat_id = Column(Integer, ForeignKey("chats.id", ondelete="CASCADE"))
-    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    message = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=False), server_default=func.now())
+    id = Column(Integer, primary_key=True, index=True)  # ID ข้อความ
+    chat_id = Column(Integer, ForeignKey("chats.id", ondelete="CASCADE"))  # ID ห้องแชท
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # ID ผู้ส่ง
+    message = Column(Text, nullable=False)  # ข้อความ
+    created_at = Column(DateTime(timezone=False), server_default=func.now())  # เวลาสร้าง
 
-    chat = relationship("Chat", back_populates="messages")
-    sender = relationship("User", back_populates="sent_messages")
+    chat = relationship("Chat", back_populates="messages")  # ความสัมพันธ์ไปยัง chat
+    sender = relationship("User", back_populates="sent_messages")  # ความสัมพันธ์ไปยังผู้ส่ง
 
+
+# ======================
 # AdminLog Model
+# ======================
 class AdminLog(Base):
     __tablename__ = "admin_logs"
     
-    id = Column(Integer, primary_key=True, index=True)
-    admin_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    admin_username = Column(String(100), nullable=False)
-    action = Column(Text, nullable=False)
-    timestamp = Column(DateTime(timezone=False), server_default=func.now())
+    id = Column(Integer, primary_key=True, index=True)  # ID log
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # ID admin ที่ทำ action
+    admin_username = Column(String(100), nullable=False)  # username ของ admin
+    action = Column(Text, nullable=False)  # รายละเอียด action
+    timestamp = Column(DateTime(timezone=False), server_default=func.now())  # เวลาที่ทำ action
     
-    admin = relationship("User", back_populates="admin_logs")
+    admin = relationship("User", back_populates="admin_logs")  # ความสัมพันธ์ไปยังผู้ดูแล

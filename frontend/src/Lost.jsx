@@ -8,12 +8,18 @@ const Lost = ({ currentUserId }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let isMounted = true; // ป้องกัน memory leak
+
     const fetchLostItems = async () => {
+      setLoading(true);
+      setItems([]); // ล้าง state ก่อน fetch
       try {
         const res = await fetch("http://localhost:8000/api/lost-items");
         const data = await res.json();
 
-        // กรองโพสต์ของตัวเองออก
+        if (!isMounted) return;
+
+        // กรองโพสต์ของตัวเอง
         const filteredItems = data.filter(
           (item) => item.user_id !== currentUserId
         );
@@ -21,14 +27,17 @@ const Lost = ({ currentUserId }) => {
       } catch (error) {
         console.error("Error fetching lost items:", error);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchLostItems();
+
+    return () => {
+      isMounted = false;
+    };
   }, [currentUserId]);
 
-  // เรียก API เพื่อสร้างหรือดึง chat
   const handleChat = async (otherUserId, itemId, ownerUsername, itemImage, itemTitle) => { 
     try {
       const res = await fetch("http://localhost:8000/api/chats/get-or-create", {
@@ -45,14 +54,13 @@ const Lost = ({ currentUserId }) => {
 
       const chat = await res.json();
 
-      // ส่ง ownerUsername ให้ ChatPage header
       navigate(`/chat/${chat.chat_id}`, {
         state: {
           currentUserId,
           otherUserId,
-          itemImage,        // รูป item
-          itemTitle,        // ชื่อ item
-          ownerUsername,    // username เจ้าของ item
+          itemImage,
+          itemTitle,
+          ownerUsername,
         },
       });
     } catch (error) {
@@ -63,7 +71,7 @@ const Lost = ({ currentUserId }) => {
 
   if (loading) {
     return (
-      <main className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+      <main key={currentUserId} className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto mb-4"></div>
           <p className="text-gray-300 text-lg">Loading lost items...</p>
@@ -73,9 +81,8 @@ const Lost = ({ currentUserId }) => {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8 duration-700 rounded-[2rem]">
+    <main key={currentUserId} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8 duration-700 rounded-[2rem]">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent mb-4">
             Reported Lost Items
@@ -105,17 +112,13 @@ const Lost = ({ currentUserId }) => {
                 className="group relative bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 rounded-3xl shadow-xl overflow-hidden 
                            hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300"
               >
-                {/* Image Container */}
                 <div className="relative overflow-hidden">
                   <img
                     src={item.image_data}
                     alt={item.title}
                     className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
                   />
-                  {/* Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-60"></div>
-                  
-                  {/* Type Badge */}
                   <div className="absolute top-4 right-4">
                     <span className="px-4 py-2 rounded-full text-sm font-bold bg-red-500/90 backdrop-blur-sm text-white shadow-lg">
                       {item.type === "lost" ? "🔴 Lost" : "🟢 Found"}
@@ -123,9 +126,7 @@ const Lost = ({ currentUserId }) => {
                   </div>
                 </div>
 
-                {/* Content */}
                 <div className="p-6 space-y-4">
-                  {/* Title */}
                   <div className="flex items-start space-x-3">
                     <span className="text-3xl flex-shrink-0">
                       {item.type === "lost" ? "📱" : "📦"}
@@ -135,9 +136,7 @@ const Lost = ({ currentUserId }) => {
                     </h2>
                   </div>
 
-                  {/* Details */}
                   <div className="space-y-2">
-                    {/* Category */}
                     <div className="flex items-center space-x-2 text-gray-300">
                       <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                       <span className="text-sm">
@@ -146,16 +145,16 @@ const Lost = ({ currentUserId }) => {
                       </span>
                     </div>
 
-                    {/* User */}
-                    <div className="flex items-center space-x-2 text-gray-300">
-                      <User size={16} className="text-purple-400" />
-                      <span className="text-sm">
-                        <span className="text-gray-500">Reported by:</span>{" "}
-                        <span className="font-medium">{item.username}</span>
-                      </span>
-                    </div>
+                    {item.user_id !== currentUserId && (
+                      <div className="flex items-center space-x-2 text-gray-300">
+                        <User size={16} className="text-purple-400" />
+                        <span className="text-sm">
+                          <span className="text-gray-500">Reported by:</span>{" "}
+                          <span className="font-medium">{item.username}</span>
+                        </span>
+                      </div>
+                    )}
 
-                    {/* Location (if available) */}
                     {item.location && (
                       <div className="flex items-center space-x-2 text-gray-300">
                         <MapPin size={16} className="text-green-400" />
@@ -163,7 +162,6 @@ const Lost = ({ currentUserId }) => {
                       </div>
                     )}
 
-                    {/* Date (if available) */}
                     {item.created_at && (
                       <div className="flex items-center space-x-2 text-gray-400">
                         <Calendar size={14} />
@@ -173,16 +171,13 @@ const Lost = ({ currentUserId }) => {
                       </div>
                     )}
                   </div>
-                  <p className="text-gray-400 mb-2">Category: {item.category}</p>
-                  <p className="text-gray-300 font-medium mb-4">
-                    User: {item.username}
-                  </p>
+
                   <div className="mt-auto">
                     <button  
                       onClick={() => handleChat(
                         item.user_id,
                         item.id,
-                        item.username,  // ownerUsername
+                        item.username,
                         item.image_data, 
                         item.title
                       )}
