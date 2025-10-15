@@ -14,12 +14,12 @@ class User(Base):
     password = Column(String, nullable=False)
     role = Column(String(20), default="user")
 
-    items = relationship("Item", back_populates="user")
+    items = relationship("Item", back_populates="user", cascade="all, delete")
 
     # 👇 เพิ่ม
     sent_messages = relationship("Message", back_populates="sender", cascade="all, delete")
-    chats_as_user1 = relationship("Chat", foreign_keys="Chat.user1_id", back_populates="user1")
-    chats_as_user2 = relationship("Chat", foreign_keys="Chat.user2_id", back_populates="user2")
+    chats_as_user1 = relationship("Chat", foreign_keys="Chat.user1_id", back_populates="user1", cascade="all, delete")
+    chats_as_user2 = relationship("Chat", foreign_keys="Chat.user2_id", back_populates="user2", cascade="all, delete")
     admin_logs = relationship("AdminLog", back_populates="admin")
 
 
@@ -39,7 +39,7 @@ class Item(Base):
     text_embedding = Column(Vector(512), nullable=True)
     image_embedding = Column(Vector(512), nullable=True)
 
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="items")
 
 # Chat Model
@@ -47,8 +47,8 @@ class Chat(Base):
     __tablename__ = "chats"
     
     id = Column(Integer, primary_key=True, index=True)
-    user1_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    user2_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user1_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user2_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=True)  # เพิ่ม optional
     created_at = Column(DateTime(timezone=False), server_default=func.now())
 

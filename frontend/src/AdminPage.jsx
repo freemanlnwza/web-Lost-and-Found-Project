@@ -1,243 +1,219 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Users, FileText, MessageSquare, Trash2, Shield, Activity } from "lucide-react";
+import { Users, FileText, MessageSquare, Trash2, Activity } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
-export default function AdminPage() {
+
+const adminPage = () => {
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState([]);
   const [items, setItems] = useState([]);
   const [messages, setMessages] = useState([]);
-  const [adminLogs, setAdminLogs] = useState([]);
+  const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const contentRef = useRef(null);
+  const navigate = useNavigate();
 
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem("user");
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const isAuthenticated = currentUser?.role === "admin";
+
+  // Loading / auth check
+  if (!currentUser) {
+    return (
+      <div className="flex justify-center items-center h-screen text-gray-400">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen text-red-400">
+        <p>Access denied! Admin only.</p>
+        <button
+          onClick={() => navigate("/", { replace: true })}
+          className="mt-4 px-4 py-2 bg-red-500 rounded text-white"
+        >
+          Go Home
+        </button>
+      </div>
+    );
+  }
+
+  // Fetch data
   useEffect(() => {
-    // Get current user from localStorage
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    setCurrentUser(user);
-    
-    // Check if user is admin
-    if (user.role !== "admin") {
-      alert("Access denied! Admin only.");
-      window.location.href = "/";
-      return;
-    }
-  }, []);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("token") || currentUser?.id;
 
-  useEffect(() => {
-    loadData();
-  }, [activeTab]);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token") || currentUser?.id;
-      
-      if (activeTab === "users") {
-        const res = await fetch("http://localhost:8000/admin/users", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setUsers(data);
-        } else {
-          console.error("Failed to fetch users");
+        if (activeTab === "users") {
+          const res = await fetch("http://localhost:8000/admin/users", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error("Failed to fetch users");
+          setUsers(await res.json());
+        } else if (activeTab === "items") {
+          const res = await fetch("http://localhost:8000/admin/items", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error("Failed to fetch items");
+          setItems(await res.json());
+        } else if (activeTab === "messages") {
+          const res = await fetch("http://localhost:8000/admin/messages", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error("Failed to fetch messages");
+          setMessages(await res.json());
+        } else if (activeTab === "logs") {
+          const res = await fetch("http://localhost:8000/admin/logs", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error("Failed to fetch logs");
+          setLogs(await res.json());
         }
-      } else if (activeTab === "items") {
-        const res = await fetch("http://localhost:8000/admin/items", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setItems(data);
-        } else {
-          console.error("Failed to fetch items");
-        }
-      } else if (activeTab === "messages") {
-        const res = await fetch("http://localhost:8000/admin/messages", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setMessages(data);
-        } else {
-          console.error("Failed to fetch messages");
-        }
-      } else if (activeTab === "logs") {
-        const res = await fetch("http://localhost:8000/admin/logs", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setAdminLogs(data);
-        } else {
-          console.error("Failed to fetch logs");
-        }
+      } catch (err) {
+        console.error(err);
+        setErrorMsg(err.message || "เกิดข้อผิดพลาด");
+      } finally {
+        setLoading(false);
+        contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }
-    } catch (error) {
-      console.error("Error loading data:", error);
-      alert("Failed to load data. Check console for details.");
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    fetchData();
+  }, [activeTab, currentUser]);
+
+  // Logout
+  const handleLogout = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    setCurrentUser(null);
+    navigate("/login", { replace: true });
   };
 
+  // User actions
   const handleMakeAdmin = async (userId) => {
     if (!confirm("Are you sure you want to make this user an admin?")) return;
-    
     try {
       const token = localStorage.getItem("token") || currentUser?.id;
       const res = await fetch(`http://localhost:8000/admin/users/${userId}/make-admin`, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
       if (res.ok) {
-        setUsers(users.map(u => u.id === userId ? { ...u, role: 'admin' } : u));
-        alert("User promoted to admin successfully!");
-        loadData(); // Reload to update logs
-      } else {
-        const error = await res.json();
-        alert(error.detail || "Failed to promote user");
+        setUsers(users.map(u => u.id === userId ? { ...u, role: "admin" } : u));
       }
-    } catch (error) {
-      console.error("Error promoting user:", error);
+    } catch (err) {
+      console.error(err);
       alert("Failed to promote user");
     }
   };
 
   const handleRemoveAdmin = async (userId) => {
     if (!confirm("Are you sure you want to remove admin role from this user?")) return;
-    
     try {
       const token = localStorage.getItem("token") || currentUser?.id;
       const res = await fetch(`http://localhost:8000/admin/users/${userId}/remove-admin`, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
       if (res.ok) {
-        setUsers(users.map(u => u.id === userId ? { ...u, role: 'user' } : u));
-        alert("Admin role removed successfully!");
-        loadData(); // Reload to update logs
-      } else {
-        const error = await res.json();
-        alert(error.detail || "Failed to remove admin role");
+        setUsers(users.map(u => u.id === userId ? { ...u, role: "user" } : u));
       }
-    } catch (error) {
-      console.error("Error removing admin role:", error);
+    } catch (err) {
+      console.error(err);
       alert("Failed to remove admin role");
     }
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm("Are you sure you want to delete this user? This will also delete all their items and messages.")) return;
-    
+    if (!confirm("Are you sure you want to delete this user?")) return;
     try {
       const token = localStorage.getItem("token") || currentUser?.id;
       const res = await fetch(`http://localhost:8000/admin/users/${userId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
-      if (res.ok) {
-        setUsers(users.filter(u => u.id !== userId));
-        alert("User deleted successfully!");
-        loadData(); // Reload to update logs
-      } else {
-        const error = await res.json();
-        alert(error.detail || "Failed to delete user");
-      }
-    } catch (error) {
-      console.error("Error deleting user:", error);
+      if (res.ok) setUsers(users.filter(u => u.id !== userId));
+    } catch (err) {
+      console.error(err);
       alert("Failed to delete user");
     }
   };
 
   const handleDeleteItem = async (itemId) => {
     if (!confirm("Are you sure you want to delete this item?")) return;
-    
     try {
       const token = localStorage.getItem("token") || currentUser?.id;
       const res = await fetch(`http://localhost:8000/admin/items/${itemId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
-      if (res.ok) {
-        setItems(items.filter(i => i.id !== itemId));
-        alert("Item deleted successfully!");
-        loadData(); // Reload to update logs
-      } else {
-        const error = await res.json();
-        alert(error.detail || "Failed to delete item");
-      }
-    } catch (error) {
-      console.error("Error deleting item:", error);
+      if (res.ok) setItems(items.filter(i => i.id !== itemId));
+    } catch (err) {
+      console.error(err);
       alert("Failed to delete item");
     }
   };
 
   const handleDeleteMessage = async (messageId) => {
     if (!confirm("Are you sure you want to delete this message?")) return;
-    
     try {
       const token = localStorage.getItem("token") || currentUser?.id;
       const res = await fetch(`http://localhost:8000/admin/messages/${messageId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
-      if (res.ok) {
-        setMessages(messages.filter(m => m.id !== messageId));
-        alert("Message deleted successfully!");
-        loadData(); // Reload to update logs
-      } else {
-        const error = await res.json();
-        alert(error.detail || "Failed to delete message");
-      }
-    } catch (error) {
-      console.error("Error deleting message:", error);
+      if (res.ok) setMessages(messages.filter(m => m.id !== messageId));
+    } catch (err) {
+      console.error(err);
       alert("Failed to delete message");
     }
   };
 
+  // Stats
   const stats = [
     { label: "Total Users", value: users.length, icon: Users, color: "blue" },
     { label: "Total Items", value: items.length, icon: FileText, color: "green" },
     { label: "Total Messages", value: messages.length, icon: MessageSquare, color: "purple" },
-    { label: "Admin Actions", value: adminLogs.length, icon: Activity, color: "orange" },
+    { label: "Admin Actions", value: logs.length, icon: Activity, color: "orange" },
   ];
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100 p-6">
-      {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Shield className="text-yellow-400" size={36} />
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
-                Admin Dashboard
-              </h1>
-              <p className="text-gray-400 mt-1">Welcome, {currentUser?.username}</p>
-            </div>
-          </div>
-        </div>
-      </motion.div>
+  const colorMap = {
+    blue: "text-blue-400",
+    green: "text-green-400",
+    purple: "text-purple-400",
+    orange: "text-orange-400",
+  };
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat, index) => (
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100 flex flex-col p-4 space-y-4">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Admin Panel</h1>
+        <button
+          onClick={handleLogout}
+          className="px-4 py-2 bg-red-500 rounded hover:bg-red-600"
+        >
+          Logout
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, idx) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.1 }}
+            transition={{ delay: idx * 0.1 }}
             className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50"
           >
             <div className="flex items-center justify-between">
@@ -245,27 +221,25 @@ export default function AdminPage() {
                 <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
                 <p className="text-3xl font-bold">{stat.value}</p>
               </div>
-              <stat.icon className={`text-${stat.color}-400`} size={40} />
+              <stat.icon className={colorMap[stat.color]} size={40} />
             </div>
           </motion.div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
+      <div className="flex space-x-2 overflow-x-auto bg-gray-800/50 p-2 rounded-xl">
         {[
           { id: "users", label: "Users", icon: Users },
           { id: "items", label: "Items", icon: FileText },
           { id: "messages", label: "Messages", icon: MessageSquare },
           { id: "logs", label: "Admin Logs", icon: Activity },
-        ].map((tab) => (
+        ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${
-              activeTab === tab.id
-                ? "bg-yellow-500 text-gray-900"
-                : "bg-gray-800/50 text-gray-400 hover:bg-gray-700/50"
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium whitespace-nowrap ${
+              activeTab === tab.id ? "bg-yellow-500 text-gray-900" : "bg-gray-700/50 hover:bg-gray-600/50"
             }`}
           >
             <tab.icon size={18} />
@@ -274,12 +248,13 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {/* Content Area */}
+      {/* Content */}
       <motion.div
         key={activeTab}
+        ref={contentRef}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gray-800/30 backdrop-blur-lg rounded-2xl border border-gray-700/50 p-6"
+        className="flex-1 overflow-y-auto p-4 bg-gray-800/30 backdrop-blur-lg rounded-2xl border border-gray-700/50"
       >
         {loading ? (
           <div className="text-center py-12">
@@ -300,58 +275,32 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((user) => (
-                      <tr key={user.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
-                        <td className="py-4 px-4">{user.id}</td>
-                        <td className="py-4 px-4 font-medium">{user.username}</td>
+                    {users.map(u => (
+                      <tr key={u.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
+                        <td className="py-4 px-4">{u.id}</td>
+                        <td className="py-4 px-4 font-medium">{u.username}</td>
                         <td className="py-4 px-4">
-                          <span className={`px-3 py-1 rounded-full text-sm ${
-                            user.role === 'admin' 
-                              ? 'bg-yellow-500/20 text-yellow-400' 
-                              : 'bg-blue-500/20 text-blue-400'
-                          }`}>
-                            {user.role || 'user'}
+                          <span className={`px-3 py-1 rounded-full text-sm ${u.role === 'admin' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                            {u.role || 'user'}
                           </span>
                         </td>
-                        <td className="py-4 px-4">
-                          <div className="flex space-x-2">
-                            {user.role !== 'admin' ? (
-                              <>
-                                <button
-                                  onClick={() => handleMakeAdmin(user.id)}
-                                  className="px-3 py-1 bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 rounded-lg transition-colors text-sm"
-                                  title="Promote to Admin"
-                                >
-                                  Make Admin
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteUser(user.id)}
-                                  className="text-red-400 hover:text-red-300 transition-colors"
-                                  title="Delete User"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
-                              </>
-                            ) : (
-                              user.id !== currentUser?.id && (
-                                <button
-                                  onClick={() => handleRemoveAdmin(user.id)}
-                                  className="px-3 py-1 bg-gray-500/20 text-gray-400 hover:bg-gray-500/30 rounded-lg transition-colors text-sm"
-                                  title="Remove Admin Role"
-                                >
-                                  Remove Admin
-                                </button>
-                              )
-                            )}
-                          </div>
+                        <td className="py-4 px-4 flex space-x-2">
+                          {u.role !== 'admin' ? (
+                            <>
+                              <button onClick={() => handleMakeAdmin(u.id)} className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm">Make Admin</button>
+                              <button onClick={() => handleDeleteUser(u.id)} className="text-red-400"><Trash2 size={18} /></button>
+                            </>
+                          ) : (
+                            u.id !== currentUser?.id && (
+                              <button onClick={() => handleRemoveAdmin(u.id)} className="px-3 py-1 bg-gray-500/20 text-gray-400 rounded-lg text-sm">Remove Admin</button>
+                            )
+                          )}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {users.length === 0 && (
-                  <p className="text-center text-gray-400 py-8">No users found</p>
-                )}
+                {users.length === 0 && <p className="text-center text-gray-400 py-8">No users found</p>}
               </div>
             )}
 
@@ -368,35 +317,18 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item) => (
-                      <tr key={item.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
-                        <td className="py-4 px-4">{item.id}</td>
-                        <td className="py-4 px-4 font-medium">{item.title}</td>
-                        <td className="py-4 px-4">
-                          <span className={`px-3 py-1 rounded-full text-sm ${
-                            item.category === 'Lost' 
-                              ? 'bg-red-500/20 text-red-400' 
-                              : 'bg-green-500/20 text-green-400'
-                          }`}>
-                            {item.category}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 text-gray-400">{item.user_id}</td>
-                        <td className="py-4 px-4">
-                          <button
-                            onClick={() => handleDeleteItem(item.id)}
-                            className="text-red-400 hover:text-red-300 transition-colors"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </td>
+                    {items.map(i => (
+                      <tr key={i.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
+                        <td className="py-4 px-4">{i.id}</td>
+                        <td className="py-4 px-4 font-medium">{i.title}</td>
+                        <td className="py-4 px-4"><span className={`px-3 py-1 rounded-full text-sm ${i.category === 'Lost' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>{i.category}</span></td>
+                        <td className="py-4 px-4">{i.user_id}</td>
+                        <td className="py-4 px-4"><button onClick={() => handleDeleteItem(i.id)} className="text-red-400"><Trash2 size={18} /></button></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {items.length === 0 && (
-                  <p className="text-center text-gray-400 py-8">No items found</p>
-                )}
+                {items.length === 0 && <p className="text-center text-gray-400 py-8">No items found</p>}
               </div>
             )}
 
@@ -413,56 +345,50 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {messages.map((msg) => (
-                      <tr key={msg.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
-                        <td className="py-4 px-4">{msg.id}</td>
-                        <td className="py-4 px-4">{msg.chat_id}</td>
-                        <td className="py-4 px-4">{msg.sender_id}</td>
-                        <td className="py-4 px-4 max-w-md truncate">{msg.message}</td>
-                        <td className="py-4 px-4">
-                          <button
-                            onClick={() => handleDeleteMessage(msg.id)}
-                            className="text-red-400 hover:text-red-300 transition-colors"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </td>
+                    {messages.map(m => (
+                      <tr key={m.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
+                        <td className="py-4 px-4">{m.id}</td>
+                        <td className="py-4 px-4">{m.chat_id}</td>
+                        <td className="py-4 px-4">{m.sender_id}</td>
+                        <td className="py-4 px-4 max-w-md truncate">{m.message}</td>
+                        <td className="py-4 px-4"><button onClick={() => handleDeleteMessage(m.id)} className="text-red-400"><Trash2 size={18} /></button></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {messages.length === 0 && (
-                  <p className="text-center text-gray-400 py-8">No messages found</p>
-                )}
+                {messages.length === 0 && <p className="text-center text-gray-400 py-8">No messages found</p>}
               </div>
             )}
 
             {activeTab === "logs" && (
               <div className="space-y-3">
-                {adminLogs.map((log) => (
-                  <motion.div
-                    key={log.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="bg-gray-700/30 rounded-xl p-4 border border-gray-700 flex justify-between items-center"
-                  >
+                {logs.map(log => (
+                  <motion.div key={log.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-gray-700/30 rounded-xl p-4 border border-gray-700 flex justify-between items-center">
                     <div>
                       <p className="font-medium">{log.action}</p>
                       <p className="text-sm text-gray-400">by {log.admin_username}</p>
                     </div>
-                    <p className="text-sm text-gray-500">
-                      {new Date(log.timestamp).toLocaleString()}
-                    </p>
+                    <p className="text-sm text-gray-500">{new Date(log.timestamp).toLocaleString()}</p>
                   </motion.div>
                 ))}
-                {adminLogs.length === 0 && (
-                  <p className="text-center text-gray-400 py-8">No admin logs yet</p>
-                )}
+                {logs.length === 0 && <p className="text-center text-gray-400 py-8">No admin logs yet</p>}
               </div>
             )}
           </>
         )}
       </motion.div>
+
+      {/* Error Popup */}
+      {errorMsg && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 text-white p-6 rounded-lg max-w-sm text-center">
+            <p className="mb-4">{errorMsg}</p>
+            <button className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700" onClick={() => setErrorMsg(null)}>OK</button>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default adminPage;
