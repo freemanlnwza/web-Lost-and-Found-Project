@@ -6,11 +6,12 @@ from models import User, Item, Chat, Message
 from schemas import UserCreate, ItemCreate, MessageCreate
 import bcrypt
 import io
-from fastapi import HTTPException, UploadFile
+from fastapi import Depends, HTTPException, UploadFile
 from typing import Optional, List
 from utils import get_text_embedding, get_image_embedding
 from datetime import datetime
-
+from database import get_db
+security = HTTPBearer()
 # ===========================
 # User
 # ===========================
@@ -149,6 +150,26 @@ def is_user_in_chat(db: Session, chat_id: int, user_id: int) -> bool:
         return False
     return user_id in [chat.user1_id, chat.user2_id]
 
+def get_user_chats(db: Session, user_id: int):
+    chats = db.query(models.Chat).filter(
+        (models.Chat.user1_id == user_id) | (models.Chat.user2_id == user_id)
+    ).all()
+
+    result = []
+    for chat in chats:
+        result.append({
+            "id": chat.id,
+            "user1_id": chat.user1_id,
+            "user2_id": chat.user2_id,
+            "user1_username": chat.user1.username if chat.user1 else None,
+            "user2_username": chat.user2.username if chat.user2 else None,
+            "created_at": chat.created_at,
+            "item_title": chat.item.title if chat.item else None
+        })
+    return result
+
+
+
 def encode_image(data, content_type):
     if data:
         return f"data:{content_type};base64,{base64.b64encode(data).decode()}"
@@ -180,3 +201,17 @@ def log_admin_action(db: Session, admin_id: int, admin_username: str, action: st
         db.commit()
     except Exception as e:
         print(f"Failed to log admin action: {e}")
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> User:
+    """Get current user from token"""
+    try:
+        user_id = int(credentials.credentials)
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid token")
