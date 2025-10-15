@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
-// ✅ Beautiful Popup Component
+// ===================== Popup Component =====================
 const Popup = ({ type = "success", message, onClose, uploadedItem }) => {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
@@ -138,6 +138,7 @@ const Popup = ({ type = "success", message, onClose, uploadedItem }) => {
   );
 };
 
+// ===================== UploadPage =====================
 const UploadPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -152,7 +153,7 @@ const UploadPage = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [showPopup, setShowPopup] = useState(false);
-  const [popupType, setPopupType] = useState("success"); // ✅ เพิ่ม
+  const [popupType, setPopupType] = useState("success");
   const [popupMessage, setPopupMessage] = useState("");
   const [showMessagePopup, setShowMessagePopup] = useState(false);
 
@@ -174,7 +175,7 @@ const UploadPage = () => {
           })
           .catch(() => {
             setPopupMessage("Image can't upload, please try new Image.");
-            setPopupType("error"); // ✅ เพิ่ม
+            setPopupType("error");
             setShowMessagePopup(true);
           });
       } else {
@@ -189,7 +190,7 @@ const UploadPage = () => {
   const requireLogin = () => {
     if (!isAuthenticated) {
       setPopupMessage("⚠ Login required to continue.");
-      setPopupType("warning"); // ✅ เพิ่ม
+      setPopupType("warning");
       setShowMessagePopup(true);
       navigate("/login");
       return false;
@@ -212,7 +213,7 @@ const UploadPage = () => {
         })
         .catch(() => {
           setPopupMessage("Image can't upload, please try new Image.");
-          setPopupType("error"); // ✅ เพิ่ม
+          setPopupType("error");
           setShowMessagePopup(true);
         });
     } else {
@@ -225,7 +226,6 @@ const UploadPage = () => {
 
   const onFileChange = (e) => handleImageUpload(e.target.files[0]);
 
-  // ===================== Drag & Drop =====================
   const onDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -239,13 +239,11 @@ const UploadPage = () => {
     handleImageUpload(file);
   };
 
-  // ===================== Select Type =====================
   const selectType = (type) => {
     if (!requireLogin()) return;
     setSelectedType(type);
   };
 
-  // ===================== Reset Form =====================
   const resetForm = () => {
     setSelectedType("");
     setUploadedImage(null);
@@ -268,7 +266,7 @@ const UploadPage = () => {
         setUploadedImage(imageFile);
       } catch (err) {
         setPopupMessage("Image can't upload, please try new Image.");
-        setPopupType("error"); // ✅ เพิ่ม
+        setPopupType("error");
         setShowMessagePopup(true);
         return;
       }
@@ -276,7 +274,7 @@ const UploadPage = () => {
 
     if (!imageFile || !message || !selectedType || !category) {
       setPopupMessage("Please complete all fields and select an item category.");
-      setPopupType("warning"); // ✅ เพิ่ม
+      setPopupType("warning");
       setShowMessagePopup(true);
       return;
     }
@@ -290,26 +288,26 @@ const UploadPage = () => {
     formData.append("user_id", user?.id || 0);
 
     try {
-      const res = await fetch("http://localhost:8000/upload", {
+      const res = await fetch("http://localhost:8000/api/upload", {
         method: "POST",
         body: formData,
       });
 
       if (!res.ok) {
         setPopupMessage("Image can't upload, please try new Image.");
-        setPopupType("error"); // ✅ เพิ่ม
+        setPopupType("error");
         setShowMessagePopup(true);
         return;
       }
 
       const data = await res.json();
       setUploadedItem(data);
-      setPopupType("success"); // ✅ เพิ่ม
+      setPopupType("success");
       setShowPopup(true);
       resetForm();
     } catch (error) {
       setPopupMessage("Image can't upload, please try new Image.");
-      setPopupType("error"); // ✅ เพิ่ม
+      setPopupType("error");
       setShowMessagePopup(true);
     }
   };
@@ -319,25 +317,37 @@ const UploadPage = () => {
     if (!requireLogin()) return;
 
     try {
+      let imageFile = uploadedImage;
+
+      if (!imageFile && preview) {
+        const res = await fetch(preview);
+        const blob = await res.blob();
+        imageFile = new File([blob], "capture.png", { type: blob.type });
+      }
+
+      if (!message && !imageFile) {
+        setPopupMessage("Please provide text or image for search.");
+        setPopupType("warning");
+        setShowMessagePopup(true);
+        return;
+      }
+
       const formData = new FormData();
       if (message) formData.append("text", message);
-      if (uploadedImage) formData.append("image", uploadedImage);
+      if (imageFile) formData.append("image", imageFile);
 
-      const res = await fetch("http://localhost:8000/search", {
+      const res = await fetch("http://localhost:8000/api/search", {
         method: "POST",
         body: formData,
       });
 
-      if (!res.ok) {
-        throw new Error("Search failed");
-      }
+      if (!res.ok) throw new Error("Search failed");
 
       const data = await res.json();
       navigate("/searchItem", { state: { foundItems: data } });
-
     } catch (err) {
       setPopupMessage("Search failed, please try again.");
-      setPopupType("error"); // ✅ เพิ่ม
+      setPopupType("error");
       setShowMessagePopup(true);
     }
   };
@@ -346,14 +356,10 @@ const UploadPage = () => {
   return (
     <main className="flex items-center justify-center">
       <div className="w-full max-w-xl bg-gray-900 backdrop-blur-lg rounded-2xl shadow-2xl p-6 space-y-4 text-white border border-gray-800">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center">
-          Upload Image & Message
-        </h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-center">Upload Image & Message</h1>
 
         {!isAuthenticated && (
-          <p className="text-red-400 text-center">
-            ⚠ Please log in to continue.
-          </p>
+          <p className="text-red-400 text-center">⚠ Please log in to continue.</p>
         )}
 
         {/* Category select */}
@@ -403,9 +409,7 @@ const UploadPage = () => {
           }`}
         >
           {!preview ? (
-            <p className="text-gray-400">
-              Click or drag file to upload / Capture from Camera
-            </p>
+            <p className="text-gray-400">Click or drag file to upload / Capture from Camera</p>
           ) : (
             <img
               src={preview}
@@ -483,22 +487,11 @@ const UploadPage = () => {
         )}
       </div>
 
-      {/* ✅ Add animations */}
       <style jsx>{`
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes scale-in {
-          from { transform: scale(0.9); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
-        }
-        .animate-scale-in {
-          animation: scale-in 0.3s ease-out;
-        }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scale-in { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-fade-in { animation: fade-in 0.3s ease-out; }
+        .animate-scale-in { animation: scale-in 0.3s ease-out; }
       `}</style>
     </main>
   );
