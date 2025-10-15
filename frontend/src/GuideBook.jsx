@@ -4,38 +4,54 @@ import { Moon, Sun } from "lucide-react";
 
 const guides = [
     {
-        title: "User",
+        title: "User - ( how to use this website )",
         content: (
             <>
-                1. อัปโหลดรูปของสิ่งของ - ถ่ายรูปหรือเลือกจากคลังภาพของคุณ <br />
-                2. ระบุประเภทของสิ่งของ - เลือกเอง หรือใช้ AI ช่วยจำแนกให้โดยอัตโนมัติ <br />
-                3. เพิ่มคำอธิบายสั้นๆ - บอกลักษณะสำคัญของสิ่งของที่หายหรือพบเจอ <br />
-                4. เลือกประเภทโพสต์ <br />
+                1. Upload item photo - Take a picture or select one from your gallery. <br />
+                2. Specify item category - Choose manually or use AI for automatic classification. <br />
+                3. Add a short description - Describe the key characteristics of the lost or found item. <br />
+                4. Select post type <br />
                 <ul className="ml-6 mt-0 list-disc">
-                    <li>Report lost item : แจ้งของที่หาย</li>
-                    <li>Found item : แจ้งสิ่งของที่พบ</li>
+                    <li>Report lost item: Notify of an item that is missing.</li>
+                    <li>Found item: Announce an item that has been found.</li>
                 </ul>
-                5. ยืนยันข้อมูล - กด “คอนเฟิร์ม” ข้อมูลจะถูกส่งไปยังหน้าของ Lost หรือ Found <br />
-            </>
-        ),
-
-    },
-    {
-        title: "Post / Found / chat",
-        content: (
-            <>
-                1. รูปที่ถูกส่งมาจากหน้าหลักโดยผ่านปุ่ม Report lost item หริแ Found item ข้อมูลและรูปภาพก็จะมาอยู่ในหน้า Lost หรือหน้า Found พร้อมคำอธิบายที่ผู้ใช้ได้กรอกลงไป <br />
-                2. ด้านใต้ของรูปภาพและคำอธิบายจะมีปุ่มไว้พูดคุยกับต้นทางคนโพส เพื่อติดต่อสอบถามเกี่ยวกับโพสของสิ่งของนั้นๆ <br />
+                5. Confirm information - Press "Confirm" and the data will be sent to the Lost or Found page. <br />
             </>
         ),
     },
     {
-        title: "Report",
+        title: "Post / Found / chat - ( main feature )",
         content: (
             <>
-                แต่ละโพสหรือบุคคลที่สนทนา จะมีปุ่มให้กด Report พร้อมให้ใส่คำอธิบายปัญหาและสิ่งที่พบเจอพร้อมปุ่มยืนยันการร้องเรียน ข้อมูลจะถูกส่งไปที่ admin เพื่อพิจารณาในการลงโทษผู้ที่กระทำการผิด ผู้ที่ขัดต่อกฏและก่อกวนผู้อื่นจะได้รับการแจ้งการตักเตือนพร้อมข้อมูลที่ถูกแจ้งร้อง<br />
-                <br />
-                (โปรดให้เกียรติผู้อื่น และรักษามารยาท และกฎเกณฑ์เพื่อทำให้เว็บไซต์นี้น่าใช้งาน) <br />
+                1. The photo sent from the main page via the "Report lost item" or "Found item" button, along with the data and description entered by the user, will appear on the Lost page. <br />
+                2. A chat button will be available below the photo and description, allowing users to privately contact the original poster to inquire about the item. <br />
+            </>
+        ),
+    },
+    {
+        title: "Report - ( how to report )",
+        content: (
+            <>
+                Each post or person in a conversation will have a "Report" button. Clicking it allows the user to enter a description of the issue or what they encountered, along with a confirmation button to submit the complaint.<br />
+                This data will be sent to the admin for review and to consider penalizing the offending party. Users who violate the rules or disrupt others will receive a warning notice that includes the information from the submitted complaint.<br />
+            </>
+        ),
+    },
+    {
+        title: "Community Guidelines - ( Terms of Service )",
+        content: (
+            <>
+                1.Do not share personal information in the chat discussions.<br />
+                2.Respect others and engage in constructive and polite conversation.<br />
+                3.Do not post illegal or inappropriate items.<br />
+                4.Do not post items that do not belong to you (i.e., do not impersonate an owner or finder).<br />
+                5.Do not use bots or spam messages in the chat discussions.<br />
+                6.Do not use multiple accounts to deceive or scam others.<br />
+                7.If you witness an action that violates the rules or disrupts others, please submit a Report.<br />
+                8.Violating laws or harassing others may lead to your account being banned or suspended.<br />
+                9.We reserve the right to modify or update these guidelines at any time.<br />
+                ( By using this service, you agree to accept and comply with these guidelines. )<br />
+                ( Please show respect for others, maintain good etiquette, and follow these rules to <br />make this website a pleasant environment for everyone. ) <br />
             </>
         ),
     },
@@ -69,30 +85,37 @@ export default function GuideBook() {
         ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-gray-100' 
         : 'bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 text-gray-800'
     }`}>
-      {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="max-w-3xl mx-auto flex items-center justify-between mb-12"
-      >
+    <motion.div 
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="max-w-3xl mx-auto flex items-center justify-between mb-12"
+    >
+      <div className="flex flex-col items-start">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           Lost and Found Guide Book
         </h1>
-        <motion.button
-          whileHover={{ scale: 1.1, rotate: 180 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={toggleDarkMode}
-          className={`p-3 rounded-full backdrop-blur-lg transition-all duration-300 shadow-lg ${
-            darkMode 
-              ? 'bg-gray-700/50 hover:bg-gray-600/50 shadow-blue-500/20' 
-              : 'bg-white/50 hover:bg-white/80 shadow-gray-300/50'
-          }`}
-          title="Toggle Dark Mode"
-        >
-          {darkMode ? <Sun size={22} className="text-yellow-400" /> : <Moon size={22} className="text-indigo-600" />}
-        </motion.button>
-      </motion.div>
+
+        <h2 className="text-lg font-semibold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent -mt-1">
+          <br />
+          Everything You Need to Know
+        </h2>
+      </div>
+
+      <motion.button
+        whileHover={{ scale: 1.1, rotate: 180 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={toggleDarkMode}
+        className={`p-3 rounded-full backdrop-blur-lg transition-all duration-300 shadow-lg ${
+          darkMode 
+            ? 'bg-gray-700/50 hover:bg-gray-600/50 shadow-blue-500/20' 
+            : 'bg-white/50 hover:bg-white/80 shadow-gray-300/50'
+        }`}
+        title="Toggle Dark/bright Mode"
+      >
+        {darkMode ? <Sun size={22} className="text-yellow-400" /> : <Moon size={22} className="text-indigo-600" />}
+      </motion.button>
+    </motion.div>
 
       {/* Accordion Section */}
       <div className="max-w-3xl mx-auto space-y-6">

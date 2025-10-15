@@ -12,6 +12,7 @@ from utils import get_text_embedding, get_image_embedding
 from datetime import datetime
 from database import get_db
 security = HTTPBearer()
+
 # ===========================
 # User
 # ===========================
@@ -141,9 +142,8 @@ def get_messages_by_chat(db: Session, chat_id: int) -> List[Message]:
     return messages
 
 # ===========================
-# Helper
+# Helper Functions
 # ===========================
-# ลบ encode_image ออกเพราะไม่ใช้แล้ว
 def is_user_in_chat(db: Session, chat_id: int, user_id: int) -> bool:
     chat = db.query(Chat).filter(Chat.id == chat_id).first()
     if not chat:
@@ -168,13 +168,14 @@ def get_user_chats(db: Session, user_id: int):
         })
     return result
 
-
-
 def encode_image(data, content_type):
     if data:
         return f"data:{content_type};base64,{base64.b64encode(data).decode()}"
     return None
 
+# ===========================
+# Admin Functions
+# ===========================
 def get_admin_user(credentials: Optional[HTTPAuthorizationCredentials], db: Session):
     if not credentials:
         raise HTTPException(status_code=401, detail="Authorization required")
@@ -215,3 +216,41 @@ def get_current_user(
         return user
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+# ==================== USER POST MANAGEMENT ====================
+
+def get_user_items(db: Session, user_id: int):
+    """Get all items/posts created by a specific user"""
+    return db.query(Item).filter(Item.user_id == user_id).all()
+
+def update_item(db: Session, item_id: int, title: str, category: str, user_id: int):
+    """Update an item - only if user owns it"""
+    item = db.query(Item).filter(Item.id == item_id).first()
+    
+    if not item:
+        return None
+    
+    # Security check: only owner can update
+    if item.user_id != user_id:
+        raise Exception("Not authorized to update this item")
+    
+    item.title = title
+    item.category = category
+    db.commit()
+    db.refresh(item)
+    return item
+
+def delete_item(db: Session, item_id: int, user_id: int):
+    """Delete an item - only if user owns it"""
+    item = db.query(Item).filter(Item.id == item_id).first()
+    
+    if not item:
+        return False
+    
+    # Security check: only owner can delete
+    if item.user_id != user_id:
+        raise Exception("Not authorized to delete this item")
+    
+    db.delete(item)
+    db.commit()
+    return True

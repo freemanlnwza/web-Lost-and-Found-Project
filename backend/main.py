@@ -35,10 +35,6 @@ app.add_middleware(
 )
 
 # ---------------------------
-# Helper Functions
-# ---------------------------
-
-# ---------------------------
 # Detect Frame
 # ---------------------------
 @app.post("/detect-frame")
@@ -227,15 +223,60 @@ def send_message(req: MessageSendRequest, db: Session = Depends(get_db)):
     msg = crud.create_message(db, msg_in)
     return {"id": msg.id, "chat_id": msg.chat_id, "sender_id": msg.sender_id, "message": msg.message, "created_at": msg.created_at}
 
-# ✅ ดึงแชทของผู้ใช้ที่ล็อกอินอยู่
-@app.get("/chats/{user_id}", response_model=list[schemas.ChatOut])
-def get_user_chats(user_id: int, db: Session = Depends(get_db)):
-    chats = crud.get_user_chats(db, user_id)
-    return chats
+# ==================== USER POST MANAGEMENT ====================
 
-# ---------------------------
-# Admin Routes (Users, Items, Messages, Logs)
-# ---------------------------
+@app.get("/api/user/{user_id}/items")
+def get_user_posts(user_id: int, db: Session = Depends(get_db)):
+    """Get all posts by a specific user"""
+    items = crud.get_user_items(db, user_id)
+    return [
+        schemas.ItemOut(
+            id=i.id, 
+            title=i.title, 
+            type=i.type, 
+            category=i.category,
+            image_data=f"data:{i.image_content_type};base64,{base64.b64encode(i.image_data).decode()}",
+            boxed_image_data=f"data:{i.image_content_type};base64,{base64.b64encode(i.boxed_image_data).decode()}" if i.boxed_image_data else None,
+            image_filename=i.image_filename,
+            user_id=i.user_id,
+            username=i.user.username if i.user else None
+        ) for i in items
+    ]
+
+@app.put("/api/items/{item_id}")
+def update_user_post(
+    item_id: int,
+    title: str = Form(...),
+    category: str = Form(...),
+    user_id: int = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Update a post - only owner can update"""
+    try:
+        item = crud.update_item(db, item_id, title, category, user_id)
+        if not item:
+            raise HTTPException(status_code=404, detail="Item not found")
+        return {"message": "Post updated successfully", "item_id": item.id}
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+@app.delete("/api/items/{item_id}")
+def delete_user_post(
+    item_id: int,
+    user_id: int = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Delete a post - only owner can delete"""
+    try:
+        success = crud.delete_item(db, item_id, user_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Item not found")
+        return {"message": "Post deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+# ==================== ADMIN ROUTES ====================
+
 @app.get("/admin/users")
 def admin_get_users(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security), db: Session = Depends(get_db)):
     admin = get_admin_user(credentials, db)
@@ -260,44 +301,13 @@ def admin_get_logs(credentials: Optional[HTTPAuthorizationCredentials] = Depends
     logs = db.query(models.AdminLog).order_by(models.AdminLog.timestamp.desc()).limit(50).all()
     return [{"id": l.id, "admin_username": l.admin_username, "action": l.action, "timestamp": l.timestamp} for l in logs]
 
-# Admin delete/update routes remain the same as your first main.py
-# ... (admin_delete_user, admin_delete_item, admin_delete_message, admin_make_admin, admin_remove_admin)
-@app.get("/admin/users") # type: ignore
-def admin_get_users(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    """Get all users (admin only)"""
-    admin = get_admin_user(credentials, db)
-    users = db.query(models.User).all()
-    return [{"id": u.id, "username": u.username, "role": u.role if hasattr(u, 'role') else 'user'} for u in users]
-
-@app.get("/admin/items") # type: ignore
-def admin_get_items(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    """Get all items (admin only)"""
-    admin = get_admin_user(credentials, db)
-    items = db.query(models.Item).all()
-    return [{"id": i.id, "title": i.title, "category": i.category, "user_id": i.user_id} for i in items]
-
-@app.get("/admin/messages") # type: ignore
-def admin_get_messages(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    """Get all messages (admin only)"""
-    admin = get_admin_user(credentials, db)
-    messages = db.query(models.Message).all()
-    return [{"id": m.id, "chat_id": m.chat_id, "sender_id": m.sender_id, "message": m.message} for m in messages]
-
-@app.get("/admin/logs") # type: ignore
-def admin_get_logs(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    """Get admin logs (admin only)"""
-    admin = get_admin_user(credentials, db)
-    logs = db.query(models.AdminLog).order_by(models.AdminLog.timestamp.desc()).limit(50).all()
-    return [{"id": l.id, "admin_username": l.admin_username, "action": l.action, "timestamp": l.timestamp} for l in logs]
-
-@app.delete("/admin/users/{target_user_id}") # type: ignore
-def admin_delete_user(target_user_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    """Delete user (admin only)"""
+@app.delete("/admin/users/{target_user_id}")
+def admin_delete_user(target_user_id: int, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security), db: Session = Depends(get_db)):
     admin = get_admin_user(credentials, db)
     user = db.query(models.User).filter(models.User.id == target_user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if hasattr(user, 'role') and user.role == "admin":
+    if getattr(user, 'role', None) == "admin":
         raise HTTPException(status_code=403, detail="Cannot delete admin users")
     
     username = user.username
@@ -306,9 +316,8 @@ def admin_delete_user(target_user_id: int, credentials: HTTPAuthorizationCredent
     log_admin_action(db, admin.id, admin.username, f"Deleted user {username} (ID: {target_user_id})")
     return {"message": "User deleted"}
 
-@app.delete("/admin/items/{item_id}") # type: ignore
-def admin_delete_item(item_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    """Delete item (admin only)"""
+@app.delete("/admin/items/{item_id}")
+def admin_delete_item(item_id: int, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security), db: Session = Depends(get_db)):
     admin = get_admin_user(credentials, db)
     item = db.query(models.Item).filter(models.Item.id == item_id).first()
     if not item:
@@ -320,9 +329,8 @@ def admin_delete_item(item_id: int, credentials: HTTPAuthorizationCredentials = 
     log_admin_action(db, admin.id, admin.username, f"Deleted item '{title}' (ID: {item_id})")
     return {"message": "Item deleted"}
 
-@app.delete("/admin/messages/{message_id}") # type: ignore
-def admin_delete_message(message_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    """Delete message (admin only)"""
+@app.delete("/admin/messages/{message_id}")
+def admin_delete_message(message_id: int, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security), db: Session = Depends(get_db)):
     admin = get_admin_user(credentials, db)
     message = db.query(models.Message).filter(models.Message.id == message_id).first()
     if not message:
@@ -333,9 +341,8 @@ def admin_delete_message(message_id: int, credentials: HTTPAuthorizationCredenti
     log_admin_action(db, admin.id, admin.username, f"Deleted message (ID: {message_id})")
     return {"message": "Message deleted"}
 
-@app.patch("/admin/users/{target_user_id}/make-admin") # type: ignore
-def admin_make_admin(target_user_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    """Promote user to admin (admin only)"""
+@app.patch("/admin/users/{target_user_id}/make-admin")
+def admin_make_admin(target_user_id: int, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security), db: Session = Depends(get_db)):
     admin = get_admin_user(credentials, db)
     user = db.query(models.User).filter(models.User.id == target_user_id).first()
     if not user:
@@ -346,9 +353,8 @@ def admin_make_admin(target_user_id: int, credentials: HTTPAuthorizationCredenti
     log_admin_action(db, admin.id, admin.username, f"Promoted {user.username} to admin")
     return {"message": f"{user.username} is now admin"}
 
-@app.patch("/admin/users/{target_user_id}/remove-admin") # type: ignore
-def admin_remove_admin(target_user_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    """Remove admin role (admin only)"""
+@app.patch("/admin/users/{target_user_id}/remove-admin")
+def admin_remove_admin(target_user_id: int, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security), db: Session = Depends(get_db)):
     admin = get_admin_user(credentials, db)
     if target_user_id == admin.id:
         raise HTTPException(status_code=403, detail="Cannot remove your own admin role")
