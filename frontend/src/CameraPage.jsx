@@ -45,7 +45,7 @@ const CameraPage = () => {
           formData.append("image", blob, "frame.jpg");
 
           try {
-            const res = await fetch("http://localhost:8000/detect-frame", {
+            const res = await fetch("http://localhost:8000/detect/frame", {
               method: "POST",
               body: formData,
             });
