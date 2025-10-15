@@ -120,17 +120,19 @@ const ChatPage = ({ currentUserId }) => {
           <div className="hidden md:flex space-x-6">
             <NavLink to="/" label="Home" />
             <NavLink to="/lost" label="Lost" />
-            <NavLink to="/support" label="Support" />
-            <NavLink to="/guidebook" label="Guidebook" />
+            {isAuthenticated && <NavLink to="/chats" label="Chats" />}
             {!isAuthenticated ? (
               <>
                 <NavLink to="/login" label="Login" />
                 <NavLink to="/register" label="Register" />
+                <NavLink to="/guidebook" label="Guidebook" />
               </>
             ) : (
               <>
                 <NavLink to="/profile" label="Profile" />
+                 <NavLink to="/guidebook" label="Guidebook" />
                 <LogoutButton setCurrentUser={setCurrentUser} />
+               
               </>
             )}
           </div>
@@ -143,20 +145,24 @@ const ChatPage = ({ currentUserId }) => {
           </div>
         </div>
 
+        {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden bg-[#1a1a1a] border-t border-gray-800 px-4 py-3 space-y-2">
             <NavLink to="/" label="Home" onClick={() => setIsOpen(false)} />
             <NavLink to="/lost" label="Lost" onClick={() => setIsOpen(false)} />
-            <NavLink to="/support" label="Support" onClick={() => setIsOpen(false)} />
+            {isAuthenticated && <NavLink to="/chats" label="Chats" onClick={() => setIsOpen(false)} />}
             {!isAuthenticated ? (
               <>
                 <NavLink to="/login" label="Login" onClick={() => setIsOpen(false)} />
                 <NavLink to="/register" label="Register" onClick={() => setIsOpen(false)} />
+                <NavLink to="/guidebook" label="Guidebook" onClick={() => setIsOpen(false)} />
               </>
             ) : (
               <>
                 <NavLink to="/profile" label="Profile" onClick={() => setIsOpen(false)} />
+                 <NavLink to="/guidebook" label="Guidebook" onClick={() => setIsOpen(false)} />
                 <LogoutButton setCurrentUser={setCurrentUser} />
+               
               </>
             )}
           </div>
