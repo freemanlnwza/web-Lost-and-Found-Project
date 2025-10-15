@@ -76,7 +76,7 @@ const Login = ({ setIsAuthenticated }) => {
     formData.append("password", password);
 
     try {
-      const res = await fetch("http://localhost:8000/login", {
+      const res = await fetch("http://localhost:8000/auth/login", {
         method: "POST",
         body: formData,
       });
