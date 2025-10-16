@@ -106,25 +106,26 @@ const Lost = ({ currentUserId }) => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="group relative bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 rounded-3xl shadow-xl overflow-hidden 
-                           hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300"
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={item.image_data}
-                    alt={item.title}
-                    className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-60"></div>
-                  <div className="absolute top-4 right-4">
-                    <span className="px-4 py-2 rounded-full text-sm font-bold bg-red-500/90 backdrop-blur-sm text-white shadow-lg">
-                      {item.type === "lost" ? "🔴 Lost" : "🟢 Found"}
-                    </span>
-                  </div>
-                </div>
+  {items.map((item) => (
+    <div
+      key={item.id}
+      className="group relative bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 rounded-3xl shadow-xl overflow-hidden
+                 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300"
+    >
+      {/* container fixed size */}
+      <div className="relative w-full h-64 overflow-hidden rounded-3xl bg-gray-800">
+        <img
+          src={item.image_data}
+          alt={item.title}
+          className="w-full h-full object-contain"  // <-- object-contain แสดงภาพจริง
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-60"></div>
+        <div className="absolute top-4 right-4">
+          <span className="px-4 py-2 rounded-full text-sm font-bold bg-red-500/90 backdrop-blur-sm text-white shadow-lg">
+            {item.type === "lost" ? "🔴 Lost" : "🟢 Found"}
+          </span>
+        </div>
+      </div>
 
                 <div className="p-6 space-y-4">
                   <div className="flex items-start space-x-3">
