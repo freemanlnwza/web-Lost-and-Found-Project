@@ -39,6 +39,20 @@ def admin_make_admin(target_user_id: int, credentials: HTTPAuthorizationCredenti
     log_admin_action(db, admin.id, admin.username, f"Promoted {user.username} to admin")
     return {"message": f"{user.username} is now admin"}
 
+@router.patch("/users/{user_id}/remove-admin")
+def remove_admin_role(user_id: int,credentials: HTTPAuthorizationCredentials = Depends(security),db: Session = Depends(get_db)):
+    admin = get_admin_user(credentials, db)
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.role != "admin":
+        raise HTTPException(status_code=400, detail="User is not an admin")
+    user.role = "user"
+    db.commit()
+    db.refresh(user)
+    log_admin_action(db, admin.id, admin.username, f"Demoted {user.username} to user")
+    return {"message": f"Removed admin role from {user.username}"}
+
 # Items
 @router.get("/items")
 def admin_get_items(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
@@ -78,7 +92,16 @@ def admin_delete_message(message_id: int, credentials: HTTPAuthorizationCredenti
 
 # Logs
 @router.get("/logs")
-def admin_get_logs(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+def admin_get_logs(
+    credentials: HTTPAuthorizationCredentials = Depends(security),db: Session = Depends(get_db)):
     admin = get_admin_user(credentials, db)
-    logs = db.query(models.AdminLog).order_by(models.AdminLog.timestamp.desc()).limit(50).all()
-    return [{"id": l.id, "admin_username": l.admin_username, "action": l.action, "timestamp": l.timestamp} for l in logs]
+    logs = (db.query(models.AdminLog).order_by(models.AdminLog.timestamp.desc()).limit(50).all())
+    return [
+        {
+            "id": log.id,
+            "admin_username": log.admin_username,
+            "action": log.action,
+            "timestamp": log.timestamp.strftime("%m/%d/%Y, %I:%M:%S %p")
+        }
+        for log in logs
+    ]
