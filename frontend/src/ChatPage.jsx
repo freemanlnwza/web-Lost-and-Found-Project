@@ -169,15 +169,31 @@ const ChatPage = ({ currentUserId }) => {
         )}
       </nav>
 
-      {/* Chat Header */}
-      <div className="flex-none flex items-center p-4 border-b border-gray-700">
-        {chatHeader.itemImage && (
-          <img src={chatHeader.itemImage} alt={chatHeader.itemTitle} className="w-12 h-12 object-cover rounded" />
-        )}
-        <div className="flex flex-col ml-3">
-          {chatHeader.ownerUsername && <span className="text-lg font-bold">{chatHeader.ownerUsername}</span>}
-          <span className="text-xs text-gray-400 font-medium">{chatHeader.itemTitle}</span>
+          {/* Chat Header */}
+      <div className="flex-none flex items-center p-4 border-b border-gray-700 justify-between">
+        <div className="flex items-center">
+          {chatHeader.itemImage && (
+            <img
+              src={chatHeader.itemImage}
+              alt={chatHeader.itemTitle}
+              className="w-12 h-12 object-cover rounded"
+            />
+          )}
+          <div className="flex flex-col ml-3">
+            {chatHeader.ownerUsername && (
+              <span className="text-lg font-bold">{chatHeader.ownerUsername}</span>
+            )}
+            <span className="text-xs text-gray-400 font-medium">{chatHeader.itemTitle}</span>
+          </div>
         </div>
+
+        {/* Back Button */}
+        <button
+          onClick={() => navigate("/chats")}
+          className="ml-20 px-3 py-1 bg-blue-700 hover:bg-green-600 rounded text-m font-medium transition"
+        >
+          Back
+        </button>
       </div>
 
       {/* Messages */}
@@ -189,18 +205,32 @@ const ChatPage = ({ currentUserId }) => {
         ) : (
           messages.map((m) => {
             const isMine = m.sender_id === Number(currentUserId);
+
             return (
               <div
                 key={m.id}
-                className={`flex items-start space-x-2 p-2 max-w-xs rounded break-words ${
-                  isMine ? "bg-blue-600 ml-auto flex-row-reverse" : "bg-gray-700"
-                }`}
+                className={`flex ${isMine ? "justify-end" : "justify-start"}`}
               >
-                <div className="flex flex-col">
-                  {!isMine && <span className="text-xs text-gray-300 font-semibold mb-1">{m.username}</span>}
+                <div
+                  className={`inline-block px-4 py-2 break-words max-w-[70%] text-sm ${
+                    isMine
+                      ? "bg-blue-500 text-white rounded-l-lg rounded-tr-lg"
+                      : "bg-gray-700 text-white rounded-r-lg rounded-tl-lg"
+                  }`}
+                >
+                  {!isMine && (
+                    <span className="text-xs text-gray-300 font-semibold mb-1 block">
+                      {m.username}
+                    </span>
+                  )}
                   <span>{m.message}</span>
-                  <div className="text-xs text-gray-300 mt-1">
-                    {m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-"}
+                  <div className="text-xs text-gray-300 mt-1 text-right">
+                    {m.created_at
+                      ? new Date(m.created_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "-"}
                   </div>
                 </div>
               </div>
@@ -209,6 +239,8 @@ const ChatPage = ({ currentUserId }) => {
         )}
         <div ref={bottomRef} />
       </div>
+
+
 
       {/* Input */}
       <div className="flex-none flex p-4 border-t border-gray-700">
