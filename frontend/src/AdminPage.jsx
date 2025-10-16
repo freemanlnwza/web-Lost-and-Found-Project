@@ -90,13 +90,23 @@ const adminPage = () => {
     fetchData();
   }, [activeTab, currentUser]);
 
-  // Logout
-  const handleLogout = () => {
+// Logout แก้ตรงนี้ไป
+const handleLogout = async () => {
+  try {
+    await fetch("http://localhost:8000/auth/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ username: currentUser.username })
+    });
+  } catch (err) {
+    console.error("Logout failed:", err);
+  } finally {
     localStorage.clear();
     sessionStorage.clear();
     setCurrentUser(null);
     navigate("/login", { replace: true });
-  };
+  }
+};
 
   // User actions
   const handleMakeAdmin = async (userId) => {
