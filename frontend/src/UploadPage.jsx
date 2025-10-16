@@ -492,7 +492,7 @@ const UploadPage = () => {
         @keyframes scale-in { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .animate-fade-in { animation: fade-in 0.3s ease-out; }
         .animate-scale-in { animation: scale-in 0.3s ease-out; }
-      `}</style>
+      `}</style> 
     </main>
   );
 };
