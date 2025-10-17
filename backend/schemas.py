@@ -38,6 +38,7 @@ class ItemCreate(BaseModel):
     title: str  # ชื่อไอเท็ม
     type: str  # lost หรือ found
     category: str  # หมวดหมู่ไอเท็ม
+    original_image_data: Optional[bytes] = None
 
 class ItemOut(BaseModel):
     # โมเดลสำหรับแสดงข้อมูลไอเท็ม
@@ -50,11 +51,12 @@ class ItemOut(BaseModel):
     image_filename: Optional[str] = None  # ชื่อไฟล์ภาพ
     user_id: Optional[int] = None  # ID ผู้โพสต์
     username: Optional[str] = None  # ชื่อผู้โพสต์
+    original_image_data: Optional[str] = None
 
     similarity: Optional[float] = None  # คะแนนความคล้าย (ใช้ค้นหา)
     query_vector_first2: Optional[List[float]] = None  # ตัวอย่างเวกเตอร์ที่ใช้ค้นหา
     item_vector_first2: Optional[List[float]] = None  # ตัวอย่างเวกเตอร์ของไอเท็ม
-
+    
     class Config:
         from_attributes = True
 
