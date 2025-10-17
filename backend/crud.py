@@ -21,29 +21,26 @@ security = HTTPBearer()
 # ===========================
 
 def create_user(db: Session, user: UserCreate) -> User:
-    # แฮชรหัสผ่านด้วย bcrypt
     hashed_pw = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode()
-    # สร้าง user ใหม่ในฐานข้อมูล
     db_user = User(username=user.username, password=hashed_pw, role="user")
     db.add(db_user)
     db.commit()
-    db.refresh(db_user)  # โหลดข้อมูล user ที่สร้างใหม่จาก DB
+    db.refresh(db_user)
     return db_user
 
 
 def get_user_by_username(db: Session, username: str) -> Optional[User]:
-    # ดึง user ตาม username
     return db.query(User).filter(User.username == username).first()
 
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
-    # ตรวจสอบ username และ password
     user = get_user_by_username(db, username)
     if not user:
         return None
     if not bcrypt.checkpw(password.encode(), user.password.encode()):
         return None
     return user
+
 
 # ===========================
 # ฟังก์ชันจัดการ Item
@@ -56,9 +53,16 @@ def create_item(
     image_filename: str,
     image_content_type: str,
     user_id: int,
-    boxed_image_data: bytes = None,
-    image_emb: list = None
+    boxed_image_data: Optional[bytes] = None,
+    image_emb: Optional[list] = None,
+    original_image_data: Optional[bytes] = None,  # ✅ เพิ่มค่าเริ่มต้น
 ) -> models.Item:
+    """
+    ✅ ฟังก์ชันนี้จะสร้าง Item ใหม่และเก็บภาพ 3 แบบ:
+        1. cropped image (image_data)
+        2. boxed image (boxed_image_data)
+        3. original image (original_image_data)
+    """
     text_emb = utils.get_text_embedding(item.title).tolist()
     if image_emb is None:
         image_emb = utils.get_image_embedding(image_bytes).tolist()
@@ -67,56 +71,56 @@ def create_item(
         title=item.title,
         type=item.type,
         category=item.category,
-        image_data=image_bytes,
-        boxed_image_data=boxed_image_data,
+        image_data=image_bytes,  # 🟢 ครอบแล้ว
+        boxed_image_data=boxed_image_data,  # 🟢 ใส่กรอบแดง
+        original_image_data=original_image_data,  # 🟢 ต้นฉบับเต็ม
         image_filename=image_filename,
         image_content_type=image_content_type,
         user_id=user_id,
         text_embedding=text_emb,
-        image_embedding=image_emb
+        image_embedding=image_emb,
     )
+
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
     return db_item
 
+
 def get_items(db: Session, type_filter: Optional[str] = None) -> List[Item]:
-    # ดึงรายการ Item ทั้งหมดหรือกรองตาม type
     query = db.query(Item).options(joinedload(Item.user))
     if type_filter:
         query = query.filter(Item.type == type_filter)
     return query.all()
+
 
 # ===========================
 # ฟังก์ชันจัดการ Chat
 # ===========================
 
 def get_or_create_chat(db: Session, user1_id: int, user2_id: int, item_id: int = None) -> Chat:
-    """ดึง chat ระหว่าง user1 และ user2 ถ้าไม่มีสร้างใหม่ ถ้ามีแล้วแต่ item_id ยังว่างให้อัปเดต"""
     chat = (
         db.query(Chat)
         .options(joinedload(Chat.item))
         .filter(
-            ((Chat.user1_id == user1_id) & (Chat.user2_id == user2_id)) |
-            ((Chat.user1_id == user2_id) & (Chat.user2_id == user1_id))
+            ((Chat.user1_id == user1_id) & (Chat.user2_id == user2_id))
+            | ((Chat.user1_id == user2_id) & (Chat.user2_id == user1_id))
         )
         .first()
     )
 
     if chat:
-        # อัปเดต item_id ถ้ายังไม่มี
         if item_id and chat.item_id is None:
             chat.item_id = item_id
             db.commit()
             db.refresh(chat)
         return chat
 
-    # สร้าง chat ใหม่
     chat = Chat(
         user1_id=user1_id,
         user2_id=user2_id,
         item_id=item_id,
-        created_at=datetime.utcnow()
+        created_at=datetime.utcnow(),
     )
     db.add(chat)
     db.commit()
@@ -125,7 +129,6 @@ def get_or_create_chat(db: Session, user1_id: int, user2_id: int, item_id: int =
 
 
 def get_chats_for_user(db: Session, user_id: int) -> List[Chat]:
-    # ดึง chat ของ user ทั้งหมด พร้อมข้อมูล user และ item
     chats = (
         db.query(Chat)
         .options(joinedload(Chat.user1), joinedload(Chat.user2), joinedload(Chat.item))
@@ -135,17 +138,17 @@ def get_chats_for_user(db: Session, user_id: int) -> List[Chat]:
     )
     return chats
 
+
 # ===========================
 # ฟังก์ชันจัดการ Message
 # ===========================
 
 def create_message(db: Session, msg: MessageCreate) -> Message:
-    # สร้าง message ใหม่ใน DB
     db_msg = Message(
         chat_id=msg.chat_id,
         sender_id=msg.sender_id,
         message=msg.message,
-        created_at=datetime.utcnow()
+        created_at=datetime.utcnow(),
     )
     db.add(db_msg)
     db.commit()
@@ -154,7 +157,6 @@ def create_message(db: Session, msg: MessageCreate) -> Message:
 
 
 def get_messages_by_chat(db: Session, chat_id: int) -> List[Message]:
-    # ดึงข้อความทั้งหมดใน chat เรียงตามเวลาสร้าง
     messages = (
         db.query(Message)
         .filter(Message.chat_id == chat_id)
@@ -163,12 +165,12 @@ def get_messages_by_chat(db: Session, chat_id: int) -> List[Message]:
     )
     return messages
 
+
 # ===========================
 # ฟังก์ชันช่วยเหลือ (Helper)
 # ===========================
 
 def is_user_in_chat(db: Session, chat_id: int, user_id: int) -> bool:
-    # ตรวจสอบว่า user เป็นสมาชิก chat หรือไม่
     chat = db.query(Chat).filter(Chat.id == chat_id).first()
     if not chat:
         return False
@@ -176,7 +178,6 @@ def is_user_in_chat(db: Session, chat_id: int, user_id: int) -> bool:
 
 
 def get_user_chats(db: Session, user_id: int):
-    # ดึง chat ของ user พร้อมข้อมูล user และ item
     chats = db.query(models.Chat).filter(
         (models.Chat.user1_id == user_id) | (models.Chat.user2_id == user_id)
     ).all()
@@ -190,20 +191,18 @@ def get_user_chats(db: Session, user_id: int):
             "user1_username": chat.user1.username if chat.user1 else None,
             "user2_username": chat.user2.username if chat.user2 else None,
             "created_at": chat.created_at,
-            "item_title": chat.item.title if chat.item else None
+            "item_title": chat.item.title if chat.item else None,
         })
     return result
 
 
 def encode_image(data, content_type):
-    # แปลง bytes ของรูปเป็น base64 string เพื่อส่งไป frontend
     if data:
         return f"data:{content_type};base64,{base64.b64encode(data).decode()}"
     return None
 
 
 def get_admin_user(credentials: Optional[HTTPAuthorizationCredentials], db: Session):
-    # ตรวจสอบว่า user เป็น admin
     if not credentials:
         raise HTTPException(status_code=401, detail="ต้องมี Authorization")
     try:
@@ -219,13 +218,12 @@ def get_admin_user(credentials: Optional[HTTPAuthorizationCredentials], db: Sess
 
 
 def log_admin_action(db: Session, admin_id: int, admin_username: str, action: str):
-    # บันทึกการกระทำของ admin
     try:
         log = models.AdminLog(
             admin_id=admin_id,
             admin_username=admin_username,
             action=action,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
         db.add(log)
         db.commit()
@@ -235,9 +233,8 @@ def log_admin_action(db: Session, admin_id: int, admin_username: str, action: st
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> User:
-    """ดึงข้อมูลผู้ใช้ปัจจุบันจาก token"""
     try:
         user_id = int(credentials.credentials)
         user = db.query(User).filter(User.id == user_id).first()

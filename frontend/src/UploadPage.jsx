@@ -355,7 +355,9 @@ const UploadPage = () => {
   // ===================== UI =====================
   return (
     <main className="flex items-center justify-center">
-      <div className="w-full max-w-xl bg-gray-900 backdrop-blur-lg rounded-2xl shadow-2xl p-6 space-y-4 text-white border border-gray-800">
+      <div className="w-full max-w-xl bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl p-6 space-y-4 text-white border-2 border-yellow-500 mx-auto">
+
+
         <h1 className="text-2xl sm:text-3xl font-bold text-center">Upload Image & Message</h1>
 
         {!isAuthenticated && (
@@ -492,7 +494,7 @@ const UploadPage = () => {
         @keyframes scale-in { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .animate-fade-in { animation: fade-in 0.3s ease-out; }
         .animate-scale-in { animation: scale-in 0.3s ease-out; }
-      `}</style>
+      `}</style> 
     </main>
   );
 };
