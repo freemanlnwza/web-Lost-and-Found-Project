@@ -9,7 +9,12 @@ from database import get_db
 router = APIRouter(prefix="/api", tags=["Search"])
 
 @router.post("/search", response_model=list[schemas.ItemOut])
-async def search_items(text: str = Form(None), image: UploadFile = File(None), db: Session = Depends(get_db), top_k: int = Form(5)):
+async def search_items(
+    text: str = Form(None),
+    image: UploadFile = File(None),
+    db: Session = Depends(get_db),
+    top_k: int = Form(5)
+):
     if not text and not image:
         raise HTTPException(status_code=400, detail="Provide text or image for search")
 
@@ -33,10 +38,13 @@ async def search_items(text: str = Form(None), image: UploadFile = File(None), d
         item_emb = i.text_embedding if text else i.image_embedding
         sim = cosine_similarity(query_emb, item_emb)
         results.append({
-            "id": i.id, "title": i.title, "type": i.type, "category": i.category,
-            "image_data": encode_image(i.image_data, i.image_content_type),
-            "boxed_image_data": encode_image(i.boxed_image_data, i.image_content_type),
-            "image_filename": i.image_filename,
+            "id": i.id,
+            "title": i.title,
+            "type": i.type,
+            "category": i.category,
+            "image_data": encode_image(i.original_image_data, i.image_content_type),  # <-- ใช้ภาพเต็ม
+            "boxed_image_data": encode_image(i.boxed_image_data, "image/png"),       # ภาพกรอบยังเก็บไว้
+            "original_image_data": encode_image(i.original_image_data, i.image_content_type),  # ส่งกลับด้วย
             "user_id": i.user_id,
             "username": i.user.username if i.user else None,
             "similarity": round(sim, 4)
