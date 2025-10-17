@@ -81,10 +81,24 @@ const Lost = ({ currentUserId }) => {
   }
 
   return (
-    <main key={currentUserId} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8 duration-700 rounded-[2rem]">
+   <main
+  key={currentUserId}
+  className="
+    min-h-screen
+    bg-gray-800 bg-opacity-90
+    text-white
+    py-12 px-4 sm:px-6 lg:px-8
+    duration-700
+    rounded-2xl
+    shadow-2xl
+    border-2 border-yellow-500
+    mx-auto
+  ">
+  {/* เนื้อหาภายใน main */}
+
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent mb-4">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
             Reported Lost Items
           </h1>
           <p className="text-gray-400 text-lg">
@@ -106,30 +120,29 @@ const Lost = ({ currentUserId }) => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="group relative bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 rounded-3xl shadow-xl overflow-hidden 
-                           hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300"
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={item.image_data}
-                    alt={item.title}
-                    className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-60"></div>
-                  <div className="absolute top-4 right-4">
-                    <span className="px-4 py-2 rounded-full text-sm font-bold bg-red-500/90 backdrop-blur-sm text-white shadow-lg">
-                      {item.type === "lost" ? "🔴 Lost" : "🟢 Found"}
-                    </span>
-                  </div>
-                </div>
+  {items.map((item) => (
+    <div
+      key={item.id}
+      className="group relative bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 rounded-3xl shadow-xl overflow-hidden
+                 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300"
+    >
+      {/* container fixed size */}
+  <div className="relative w-full h-64 overflow-hidden rounded-3xl bg-gray-800">
+  <img
+    src={item.original_image_data || item.image_data}
+    alt={item.title}
+    className="absolute top-0 left-0 w-full h-full object-cover" 
+  />
+  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-60"></div>
+  <div className="absolute top-4 right-4">
+  </div>
+</div>
+
 
                 <div className="p-6 space-y-4">
                   <div className="flex items-start space-x-3">
                     <span className="text-3xl flex-shrink-0">
-                      {item.type === "lost" ? "📱" : "📦"}
+                      {item.type === "lost" ? "🏷️" : "📦"}
                     </span>
                     <h2 className="text-xl font-bold text-white leading-tight group-hover:text-blue-400 transition-colors">
                       {item.title}

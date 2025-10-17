@@ -111,8 +111,9 @@ function App() {
       )}
 
       {/* Content */}
+      
       <main
-        className={`flex-1 flex ${!shouldHideHeader ? "pt-14 bg-gradient-to-br from-gray-100 via-gray-200 to-gray-100" : "bg-black"} justify-center items-center`}
+        className={`flex-1 flex ${!shouldHideHeader ? "pt-14 bg-[#111827]" : "bg-black"} justify-center items-center`}
       >
         {shouldHideHeader ? ( // ถ้า path ต้องซ่อน header
           <Routes>
@@ -120,7 +121,7 @@ function App() {
             <Route path="/adminpage" element={<AdminPage />} />
           </Routes>
         ) : ( // path ปกติ
-          <div className="w-full max-w-6xl text-black py-10">
+          <div className="w-full max-w-6xl text-white py-10">
             <Routes>
               <Route path="/" element={<UploadPage />} />
               <Route path="/lost" element={<Lost currentUserId={currentUser?.id} />} />
