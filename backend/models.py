@@ -45,11 +45,12 @@ class Item(Base):
 
     text_embedding = Column(Vector(512), nullable=True)  # embedding ของข้อความ
     image_embedding = Column(Vector(512), nullable=True)  # embedding ของภาพ
+    original_image_data = Column(LargeBinary, nullable=True)
 
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # ID ผู้โพสต์
     user = relationship("User", back_populates="items")  # ความสัมพันธ์ไปยังผู้ใช้
 
-
+    
 # ======================
 # Chat Model
 # ======================
