@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Users, FileText, MessageSquare, Trash2, Activity } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState([]);
   const [items, setItems] = useState([]);
-  const [messages, setMessages] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -86,11 +85,29 @@ const AdminPage = () => {
     fetchData();
   }, [activeTab, currentUser]);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    setCurrentUser(null);
-    navigate("/login", { replace: true });
+  const handleLogout = async () => {
+    if (!currentUser) return;
+
+    try {
+      const res = await fetch("http://localhost:8000/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ username: currentUser.username }),
+      });
+
+      if (!res.ok) {
+        console.error("Logout failed:", await res.text());
+      } else {
+        console.log("Logout logged successfully");
+      }
+    } catch (err) {
+      console.error("Logout request error:", err);
+    } finally {
+      localStorage.clear();
+      sessionStorage.clear();
+      setCurrentUser(null);
+      navigate("/login", { replace: true });
+    }
   };
 
   const handleMakeAdmin = async (userId) => {
@@ -153,27 +170,29 @@ const AdminPage = () => {
     }
   };
 
-  const handleDeleteMessage = async (messageId) => {
-    if (!confirm("Are you sure you want to delete this message?")) return;
-    try {
-      const token = localStorage.getItem("token") || currentUser?.id;
-      const res = await fetch(`http://localhost:8000/admin/messages/${messageId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setMessages(messages.filter(m => m.id !== messageId));
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete message");
+
+
+const [totalLogs, setTotalLogs] = useState(0);
+
+useEffect(() => {
+  const fetchLogCount = async () => {
+    const token = localStorage.getItem("token") || currentUser?.id;
+    const res = await fetch("http://localhost:8000/admin/logs/count", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setTotalLogs(data.total_logs);
     }
   };
+  fetchLogCount();
+}, [currentUser]);
 
-  const stats = [
-    { label: "Total Users", value: users.length, icon: Users, color: "blue" },
-    { label: "Total Items", value: items.length, icon: FileText, color: "green" },
-    { label: "Total Messages", value: messages.length, icon: MessageSquare, color: "purple" },
-    { label: "Admin Actions", value: logs.length, icon: Activity, color: "orange" },
-  ];
+const stats = [
+  { label: "Total Users", value: users.length, icon: Users, color: "blue" },
+  { label: "Total Items", value: items.length, icon: FileText, color: "green" },
+  { label: "Admin Actions", value: totalLogs, icon: Activity, color: "orange" },
+];
 
   const colorMap = {
     blue: "text-blue-400",
@@ -221,7 +240,6 @@ const AdminPage = () => {
         {[
           { id: "users", label: "Users", icon: Users },
           { id: "items", label: "Items", icon: FileText },
-          { id: "messages", label: "Messages", icon: MessageSquare },
           { id: "logs", label: "Admin Logs", icon: Activity },
         ].map(tab => (
           <button
@@ -252,6 +270,7 @@ const AdminPage = () => {
           </div>
         ) : (
           <>
+            {/* Users Tab */}
             {activeTab === "users" && (
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -293,6 +312,7 @@ const AdminPage = () => {
               </div>
             )}
 
+            {/* Items Tab */}
             {activeTab === "items" && (
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -321,45 +341,16 @@ const AdminPage = () => {
               </div>
             )}
 
-            {activeTab === "messages" && (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left py-3 px-4 text-gray-400">ID</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Chat ID</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Sender ID</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Message</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {messages.map(m => (
-                      <tr key={m.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
-                        <td className="py-4 px-4">{m.id}</td>
-                        <td className="py-4 px-4">{m.chat_id}</td>
-                        <td className="py-4 px-4">{m.sender_id}</td>
-                        <td className="py-4 px-4 max-w-md truncate">{m.message}</td>
-                        <td className="py-4 px-4"><button onClick={() => handleDeleteMessage(m.id)} className="text-red-400"><Trash2 size={18} /></button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {messages.length === 0 && <p className="text-center text-gray-400 py-8">No messages found</p>}
-              </div>
-            )}
-
-          {activeTab === "logs" && (
-  <div className="space-y-6">
+         
+{activeTab === "logs" && (
+  <div className="space-y-6 p-2">
     {["login", "logout", "delete_user", "delete_post"].map(type => {
-      // กรอง log ตามประเภท
       const filteredLogs = logs
         .filter(log => log.action_type === type)
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // เรียงใหม่ → เก่า
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
       if (filteredLogs.length === 0) return null;
 
-      // ตั้งชื่อกลุ่ม log
       const typeLabels = {
         login: "🟢 Login Logs",
         logout: "🔴 Logout Logs",
@@ -370,10 +361,10 @@ const AdminPage = () => {
       return (
         <div key={type}>
           <h3 className="text-lg font-semibold mb-3 border-b border-gray-600 pb-1">
-            {typeLabels[type]}
+            {typeLabels[type]} ({filteredLogs.length})
           </h3>
-          <div className="space-y-3">
-            {filteredLogs.map(log => (
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+            {filteredLogs.map((log, index) => (
               <motion.div
                 key={log.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -383,7 +374,7 @@ const AdminPage = () => {
                 <div>
                   <p className="font-medium">{log.action}</p>
                   <p className="text-sm text-gray-400">
-                    by {log.admin_username} |{" "}
+                    by {log.admin_username || log.username} |{" "}
                     <span className="italic">{log.action_type}</span>
                   </p>
                 </div>
@@ -403,7 +394,6 @@ const AdminPage = () => {
   </div>
 )}
 
-   
           </>
         )}
       </motion.div>
