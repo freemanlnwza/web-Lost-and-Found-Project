@@ -25,3 +25,15 @@ def login_user(username: str = Form(...), password: str = Form(...), db: Session
         log_admin_action(db, user.id, user.username, f"Admin {user.username} logged in", action_type="login")
     
     return user
+
+@router.post("/logout")
+def logout_user(username: str = Form(...), db: Session = Depends(get_db)):
+    user = crud.get_user_by_username(db, username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # ✅ ถ้าเป็น admin ให้บันทึก log logout
+    if getattr(user, 'role', '') == "admin":
+        log_admin_action(db, user.id, user.username, f"Admin {user.username} logged out", action_type="logout")
+
+    return {"message": f"{user.username} logged out successfully"}
