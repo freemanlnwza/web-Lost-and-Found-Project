@@ -9,12 +9,23 @@ const SearchPage = () => {
   const foundItems = location.state?.foundItems ?? [];
 
   return (
-    <main className="flex items-center justify-center min-h-screen text-white bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
-      <div className="w-full max-w-6xl bg-gray-800 rounded-2xl shadow-2xl p-6 space-y-6 border border-gray-700">
+        <main className="flex items-center justify-center min-h-screen text-white p-6">
+      <div
+        className="
+          w-full max-w-6xl
+          bg-gray-800 bg-opacity-90
+          backdrop-blur-md
+          rounded-2xl
+          shadow-2xl
+          p-6 space-y-6
+          border-2 border-yellow-500
+          mx-auto
+        "
+      >
         <h1 className="text-2xl font-bold text-center">🔍 Search Results</h1>
 
-        {/* ปุ่ม toggle */}
-        <div className="flex justify-center mb-4">
+        {/* แถวบน: ปุ่ม Toggle */}
+        <div className="flex justify-end">
           <button
             onClick={() => setShowActualImage(!showActualImage)}
             className="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
@@ -55,8 +66,8 @@ const SearchPage = () => {
                       alt={item.title || "Image"}
                       className={
                         showActualImage
-                          ? "w-full h-full object-contain" // actual image
-                          : "w-full h-full object-cover"   // full container
+                          ? "w-full h-full object-contain"
+                          : "w-full h-full object-cover"
                       }
                     />
                   </div>
@@ -66,16 +77,18 @@ const SearchPage = () => {
           </div>
         )}
 
+        {/* แถวล่าง: ปุ่ม Back */}
         <div className="flex justify-center mt-6">
           <button
             onClick={() => navigate(-1)}
-            className="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
+            className="py-2 px-6 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
           >
             ← Back
           </button>
         </div>
       </div>
     </main>
+
   );
 };
 
