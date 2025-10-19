@@ -25,7 +25,7 @@ def admin_delete_user(user_id: int, credentials: HTTPAuthorizationCredentials = 
         raise HTTPException(status_code=403, detail="Cannot delete admin users")
     db.delete(user)
     db.commit()
-    log_admin_action(db, admin.id, admin.username, f"Deleted user ID: {user_id}")
+    log_admin_action(db, admin.id, admin.username, f"Deleted username: {user.username}", action_type="delete_user")
     return {"message": "User deleted"}
 
 @router.patch("/users/{target_user_id}/make-admin")
@@ -55,7 +55,7 @@ def admin_delete_item(item_id: int, credentials: HTTPAuthorizationCredentials = 
     title = item.title
     db.delete(item)
     db.commit()
-    log_admin_action(db, admin.id, admin.username, f"Deleted item '{title}' (ID: {item_id})")
+    log_admin_action(db, admin.id, admin.username, f"Deleted item '{title}' (ID: {item_id})", action_type="delete_post")
     return {"message": "Item deleted"}
 
 # Messages
@@ -90,3 +90,9 @@ def admin_get_logs(credentials: HTTPAuthorizationCredentials = Depends(security)
             "action_type": l.action_type,   # ✅ เพิ่มบรรทัดนี้
         } for l in logs
     ]
+
+@router.get("/logs/count")
+def admin_logs_count(db: Session = Depends(get_db), credentials: HTTPAuthorizationCredentials = Depends(security)):
+    admin = get_admin_user(credentials, db)
+    total = db.query(models.AdminLog).count()
+    return {"total_logs": total}
