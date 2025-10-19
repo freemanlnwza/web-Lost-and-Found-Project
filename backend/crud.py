@@ -217,12 +217,13 @@ def get_admin_user(credentials: Optional[HTTPAuthorizationCredentials], db: Sess
         raise HTTPException(status_code=401, detail="Token ไม่ถูกต้อง")
 
 
-def log_admin_action(db: Session, admin_id: int, admin_username: str, action: str):
+def log_admin_action(db: Session, admin_id: int, admin_username: str, action: str, action_type: str = None):
     try:
         log = models.AdminLog(
             admin_id=admin_id,
             admin_username=admin_username,
             action=action,
+            action_type=action_type,  # ✅ เพิ่ม
             timestamp=datetime.now(),
         )
         db.add(log)

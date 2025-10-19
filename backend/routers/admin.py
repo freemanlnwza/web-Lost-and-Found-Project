@@ -81,4 +81,12 @@ def admin_delete_message(message_id: int, credentials: HTTPAuthorizationCredenti
 def admin_get_logs(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
     admin = get_admin_user(credentials, db)
     logs = db.query(models.AdminLog).order_by(models.AdminLog.timestamp.desc()).limit(50).all()
-    return [{"id": l.id, "admin_username": l.admin_username, "action": l.action, "timestamp": l.timestamp} for l in logs]
+    return [
+        {
+            "id": l.id,
+            "admin_username": l.admin_username,
+            "action": l.action,
+            "timestamp": l.timestamp,
+            "action_type": l.action_type,   # ✅ เพิ่มบรรทัดนี้
+        } for l in logs
+    ]

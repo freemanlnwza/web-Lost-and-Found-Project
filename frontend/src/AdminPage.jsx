@@ -3,8 +3,7 @@ import { motion } from "framer-motion";
 import { Users, FileText, MessageSquare, Trash2, Activity } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
-
-const adminPage = () => {
+const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState([]);
   const [items, setItems] = useState([]);
@@ -12,7 +11,6 @@ const adminPage = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [isOpen, setIsOpen] = useState(false);
   const contentRef = useRef(null);
   const navigate = useNavigate();
 
@@ -23,7 +21,6 @@ const adminPage = () => {
 
   const isAuthenticated = currentUser?.role === "admin";
 
-  // Loading / auth check
   if (!currentUser) {
     return (
       <div className="flex justify-center items-center h-screen text-gray-400">
@@ -46,7 +43,6 @@ const adminPage = () => {
     );
   }
 
-  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -90,7 +86,6 @@ const adminPage = () => {
     fetchData();
   }, [activeTab, currentUser]);
 
-  // Logout
   const handleLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
@@ -98,7 +93,6 @@ const adminPage = () => {
     navigate("/login", { replace: true });
   };
 
-  // User actions
   const handleMakeAdmin = async (userId) => {
     if (!confirm("Are you sure you want to make this user an admin?")) return;
     try {
@@ -107,9 +101,7 @@ const adminPage = () => {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) {
-        setUsers(users.map(u => u.id === userId ? { ...u, role: "admin" } : u));
-      }
+      if (res.ok) setUsers(users.map(u => u.id === userId ? { ...u, role: "admin" } : u));
     } catch (err) {
       console.error(err);
       alert("Failed to promote user");
@@ -124,9 +116,7 @@ const adminPage = () => {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) {
-        setUsers(users.map(u => u.id === userId ? { ...u, role: "user" } : u));
-      }
+      if (res.ok) setUsers(users.map(u => u.id === userId ? { ...u, role: "user" } : u));
     } catch (err) {
       console.error(err);
       alert("Failed to remove admin role");
@@ -178,7 +168,6 @@ const adminPage = () => {
     }
   };
 
-  // Stats
   const stats = [
     { label: "Total Users", value: users.length, icon: Users, color: "blue" },
     { label: "Total Items", value: items.length, icon: FileText, color: "green" },
@@ -360,25 +349,65 @@ const adminPage = () => {
               </div>
             )}
 
-            {activeTab === "logs" && (
-              <div className="space-y-3">
-                {logs.map(log => (
-                  <motion.div key={log.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-gray-700/30 rounded-xl p-4 border border-gray-700 flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{log.action}</p>
-                      <p className="text-sm text-gray-400">by {log.admin_username}</p>
-                    </div>
-                    <p className="text-sm text-gray-500">{new Date(log.timestamp).toLocaleString()}</p>
-                  </motion.div>
-                ))}
-                {logs.length === 0 && <p className="text-center text-gray-400 py-8">No admin logs yet</p>}
-              </div>
-            )}
+          {activeTab === "logs" && (
+  <div className="space-y-6">
+    {["login", "logout", "delete_user", "delete_post"].map(type => {
+      // กรอง log ตามประเภท
+      const filteredLogs = logs
+        .filter(log => log.action_type === type)
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // เรียงใหม่ → เก่า
+
+      if (filteredLogs.length === 0) return null;
+
+      // ตั้งชื่อกลุ่ม log
+      const typeLabels = {
+        login: "🟢 Login Logs",
+        logout: "🔴 Logout Logs",
+        delete_user: "🗑️ Delete User Logs",
+        delete_post: "🧾 Delete Post Logs",
+      };
+
+      return (
+        <div key={type}>
+          <h3 className="text-lg font-semibold mb-3 border-b border-gray-600 pb-1">
+            {typeLabels[type]}
+          </h3>
+          <div className="space-y-3">
+            {filteredLogs.map(log => (
+              <motion.div
+                key={log.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-gray-700/30 rounded-xl p-4 border border-gray-700 flex justify-between items-center"
+              >
+                <div>
+                  <p className="font-medium">{log.action}</p>
+                  <p className="text-sm text-gray-400">
+                    by {log.admin_username} |{" "}
+                    <span className="italic">{log.action_type}</span>
+                  </p>
+                </div>
+                <p className="text-sm text-gray-500">
+                  {new Date(log.timestamp).toLocaleString()}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      );
+    })}
+
+    {logs.length === 0 && (
+      <p className="text-center text-gray-400 py-8">No admin logs yet</p>
+    )}
+  </div>
+)}
+
+   
           </>
         )}
       </motion.div>
 
-      {/* Error Popup */}
       {errorMsg && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-gray-800 text-white p-6 rounded-lg max-w-sm text-center">
@@ -391,4 +420,4 @@ const adminPage = () => {
   );
 };
 
-export default adminPage;
+export default AdminPage;
