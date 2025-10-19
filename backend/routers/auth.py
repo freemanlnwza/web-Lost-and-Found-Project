@@ -12,9 +12,16 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Username นี้ถูกใช้ไปแล้ว")
     return crud.create_user(db=db, user=user)
 
+from crud import log_admin_action
+
 @router.post("/login", response_model=schemas.UserOut)
 def login_user(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = crud.authenticate_user(db, username, password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # ✅ ถ้าเป็น admin บันทึก login log
+    if getattr(user, 'role', '') == "admin":
+        log_admin_action(db, user.id, user.username, f"Admin {user.username} logged in", action_type="login")
+    
     return user

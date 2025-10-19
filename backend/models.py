@@ -95,6 +95,7 @@ class AdminLog(Base):
     admin_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # ID admin ที่ทำ action
     admin_username = Column(String(100), nullable=False)  # username ของ admin
     action = Column(Text, nullable=False)  # รายละเอียด action
+    action_type = Column(String(50), nullable=True)  # ✅ เพิ่ม field ใหม่
     timestamp = Column(DateTime(timezone=False), server_default=func.now())  # เวลาที่ทำ action
     
     admin = relationship("User", back_populates="admin_logs")  # ความสัมพันธ์ไปยังผู้ดูแล
