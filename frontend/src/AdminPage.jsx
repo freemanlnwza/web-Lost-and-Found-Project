@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Users, FileText, MessageSquare, Trash2, Activity } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import { HiArrowRightOnRectangle } from "react-icons/hi2";
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState([]);
@@ -195,151 +195,169 @@ const stats = [
 ];
 
   const colorMap = {
-    blue: "text-blue-400",
+    blue: "text-blue-500",
     green: "text-green-400",
     purple: "text-purple-400",
     orange: "text-orange-400",
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100 flex flex-col p-4 space-y-4">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Admin Panel</h1>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 bg-red-500 rounded hover:bg-red-600"
-        >
-          Logout
-        </button>
-      </div>
+   <div className="min-h-screen bg-blue-800 text-gray-100 flex flex-col p-4 space-y-4">
+  {/* Header */}
+  <div className="flex justify-between items-center m-4">
+    <h1 className="text-4xl font-bold">Admin Panel</h1>
+    <button
+      onClick={handleLogout}
+      className="p-2 bg-red-500 rounded hover:bg-red-600 flex items-center justify-center"
+      title="Logout"
+    >
+      <HiArrowRightOnRectangle className="text-white w-14 h-10" />
+    </button>
+  </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, idx) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: idx * 0.1 }}
-            className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
-                <p className="text-3xl font-bold">{stat.value}</p>
-              </div>
-              <stat.icon className={colorMap[stat.color]} size={40} />
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex space-x-2 overflow-x-auto bg-gray-800/50 p-2 rounded-xl">
-        {[
-          { id: "users", label: "Users", icon: Users },
-          { id: "items", label: "Items", icon: FileText },
-          { id: "logs", label: "Admin Logs", icon: Activity },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium whitespace-nowrap ${
-              activeTab === tab.id ? "bg-yellow-500 text-gray-900" : "bg-gray-700/50 hover:bg-gray-600/50"
-            }`}
-          >
-            <tab.icon size={18} />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
+  {/* Stats */}
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    {stats.map((stat, idx) => (
       <motion.div
-        key={activeTab}
-        ref={contentRef}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex-1 overflow-y-auto p-4 bg-gray-800/30 backdrop-blur-lg rounded-2xl border border-gray-700/50"
+        key={stat.label}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: idx * 0.1 }}
+        className="bg-white rounded-2xl text-black p-6 border border-blue-800"
       >
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto"></div>
-            <p className="mt-4 text-gray-400">Loading...</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-black text-m mb-1">{stat.label}</p>
+            <p className="text-3xl font-bold">{stat.value}</p>
           </div>
-        ) : (
-          <>
-            {/* Users Tab */}
-            {activeTab === "users" && (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left py-3 px-4 text-gray-400">ID</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Username</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Role</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map(u => (
-                      <tr key={u.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
-                        <td className="py-4 px-4">{u.id}</td>
-                        <td className="py-4 px-4 font-medium">{u.username}</td>
-                        <td className="py-4 px-4">
-                          <span className={`px-3 py-1 rounded-full text-sm ${u.role === 'admin' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                            {u.role || 'user'}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 flex space-x-2">
-                          {u.role !== 'admin' ? (
-                            <>
-                              <button onClick={() => handleMakeAdmin(u.id)} className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm">Make Admin</button>
-                              <button onClick={() => handleDeleteUser(u.id)} className="text-red-400"><Trash2 size={18} /></button>
-                            </>
-                          ) : (
-                            u.id !== currentUser?.id && (
-                              <button onClick={() => handleRemoveAdmin(u.id)} className="px-3 py-1 bg-gray-500/20 text-gray-400 rounded-lg text-sm">Remove Admin</button>
-                            )
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {users.length === 0 && <p className="text-center text-gray-400 py-8">No users found</p>}
-              </div>
-            )}
+          <stat.icon className={colorMap[stat.color]} size={40} />
+        </div>
+      </motion.div>
+    ))}
+  </div>
 
-            {/* Items Tab */}
-            {activeTab === "items" && (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left py-3 px-4 text-gray-400">ID</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Title</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Category</th>
-                      <th className="text-left py-3 px-4 text-gray-400">User ID</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map(i => (
-                      <tr key={i.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
-                        <td className="py-4 px-4">{i.id}</td>
-                        <td className="py-4 px-4 font-medium">{i.title}</td>
-                        <td className="py-4 px-4"><span className={`px-3 py-1 rounded-full text-sm ${i.category === 'Lost' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>{i.category}</span></td>
-                        <td className="py-4 px-4">{i.user_id}</td>
-                        <td className="py-4 px-4"><button onClick={() => handleDeleteItem(i.id)} className="text-red-400"><Trash2 size={18} /></button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {items.length === 0 && <p className="text-center text-gray-400 py-8">No items found</p>}
-              </div>
-            )}
+  {/* Tabs */}
+  <div className="flex space-x-2 overflow-x-auto bg-white p-2 rounded-xl">
+    {[
+      { id: "users", label: "Users", icon: Users },
+      { id: "items", label: "Items", icon: FileText },
+      { id: "logs", label: "Admin Logs", icon: Activity },
+    ].map(tab => (
+      <button
+        key={tab.id}
+        onClick={() => setActiveTab(tab.id)}
+        className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium whitespace-nowrap ${
+          activeTab === tab.id ? "bg-yellow-400 text-black" : "bg-blue-800 hover:bg-yellow-400"
+        }`}
+      >
+        <tab.icon size={18} />
+        <span>{tab.label}</span>
+      </button>
+    ))}
+  </div>
+
+  {/* Content */}
+  <motion.div
+    key={activeTab}
+    ref={contentRef}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="flex-1 overflow-y-auto p-4 bg-white rounded-2xl border border-blue-800"
+  >
+    {loading ? (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto"></div>
+        <p className="mt-4 text-black">Loading...</p>
+      </div>
+    ) : (
+      <>
+        {/* Users Tab */}
+        {activeTab === "users" && (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-black/40">
+                  <th className="text-left py-3 px-4 text-black">ID</th>
+                  <th className="text-left py-3 px-4 text-black">Username</th>
+                  <th className="text-left py-3 px-4 text-black">Role</th>
+                  <th className="text-left py-3 px-4 text-black">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(u => (
+                  <tr key={u.id} className="border-b border-black/40 hover:bg-blue-600/30 text-black">
+                    <td className="py-4 px-4 font-medium">{u.id}</td>
+                    <td className="py-4 px-4 font-medium">{u.username}</td>
+                    <td className="py-4 px-4">
+                      <span className={`px-4 py-2  rounded-full text-sm ${
+                        u.role === 'admin' ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white'
+                      }`}>
+                        {u.role || 'user'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 flex space-x-2">
+                      {u.role !== 'admin' ? (
+                        <>
+                          <button onClick={() => handleMakeAdmin(u.id)} className="px-3 py-1 bg-yellow-400 text-white rounded-lg text-sm">Make Admin</button>
+                          <button onClick={() => handleDeleteUser(u.id)} className="text-red-500"><Trash2 size={18} /></button>
+                        </>
+                      ) : (
+                        u.id !== currentUser?.id && (
+                          <button onClick={() => handleRemoveAdmin(u.id)} className="px-3 py-1 bg-blue-800 text-white rounded-lg text-sm">Remove Admin</button>
+                        )
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {users.length === 0 && <p className="text-center text-blue-200 py-8">No users found</p>}
+          </div>
+        )}
+
+        {/* Items Tab */}
+        {activeTab === "items" && (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-black/40">
+                  <th className="text-left py-3 px-4 text-black">ID</th>
+                  <th className="text-left py-3 px-4 text-black">Image</th>
+                  <th className="text-left py-3 px-4 text-black">Title</th>
+                  <th className="text-left py-3 px-4 text-black">Category</th>
+                  <th className="text-left py-3 px-4 text-black">User ID</th>
+                  <th className="text-left py-3 px-4 text-black">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map(i => (
+                  <tr key={i.id} className="border-b border-black/40 hover:bg-blue-600/30">
+                    <td className="text-black font-medium py-4 px-4">{i.id}</td>
+                    <td className="py-4 px-4">
+                      {i.image ? (
+                        <img src={`data:image/jpeg;base64,${i.image}`} alt={i.title} className="w-16 h-16 object-cover rounded-lg border border-black/40" />
+                      ) : <span className="text-black">No image</span>}
+                    </td>
+                    <td className="text-black py-4 px-4 font-medium">{i.title}</td>
+                    <td className="py-4 px-4">
+                      <span className={`px-3 py-1 rounded-full text-sm ${
+                        i.category === "Lost" ? "bg-red-500/20 text-red-500" : "bg-green-500 text-white"
+                      }`}>
+                        {i.category}
+                      </span>
+                    </td>
+                    <td className="text-black font-medium py-4 px-4">{i.user_id}</td>
+                    <td className="py-4 px-4">
+                      <button onClick={() => handleDeleteItem(i.id)} className="text-red-400"><Trash2 size={18} /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {items.length === 0 && <p className="text-center text-black py-8">No items found</p>}
+          </div>
+        )}
+
 
          
 {activeTab === "logs" && (
@@ -360,7 +378,7 @@ const stats = [
 
       return (
         <div key={type}>
-          <h3 className="text-lg font-semibold mb-3 border-b border-gray-600 pb-1">
+          <h3 className="text-lg text-black font-semibold mb-3 border-b border-gray-600 pb-1">
             {typeLabels[type]} ({filteredLogs.length})
           </h3>
           <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
@@ -369,16 +387,16 @@ const stats = [
                 key={log.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="bg-gray-700/30 rounded-xl p-4 border border-gray-700 flex justify-between items-center"
+                className="bg-blue-600/30 text-black rounded-xl p-4 border border-black flex justify-between items-center"
               >
                 <div>
                   <p className="font-medium">{log.action}</p>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-black">
                     by {log.admin_username || log.username} |{" "}
                     <span className="italic">{log.action_type}</span>
                   </p>
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-black">
                   {new Date(log.timestamp).toLocaleString()}
                 </p>
               </motion.div>

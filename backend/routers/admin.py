@@ -1,3 +1,4 @@
+import base64
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
@@ -44,7 +45,7 @@ def admin_make_admin(target_user_id: int, credentials: HTTPAuthorizationCredenti
 def admin_get_items(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
     admin = get_admin_user(credentials, db)
     items = db.query(models.Item).all()
-    return [{"id": i.id, "title": i.title, "category": i.category, "user_id": i.user_id} for i in items]
+    return [{"id": i.id, "title": i.title, "category": i.category, "image": base64.b64encode(i.original_image_data).decode("utf-8") if i.original_image_data else None, "user_id": i.user_id} for i in items]
 
 @router.delete("/items/{item_id}")
 def admin_delete_item(item_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
