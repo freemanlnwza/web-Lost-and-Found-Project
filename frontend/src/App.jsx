@@ -1,4 +1,11 @@
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import { useState, useEffect } from "react";
 import UploadPage from "./UploadPage.jsx";
 import CameraPage from "./CameraPage.jsx";
@@ -12,11 +19,17 @@ import GuideBook from "./GuideBook.jsx";
 import AdminPage from "./AdminPage.jsx";
 import ListChat from "./ListChat.jsx";
 
-// Wrapper สำหรับ Router
+// ✅ Wrapper สำหรับ Router
 function AppWrapper() {
   return (
     <Router>
-      <App />
+      <Routes>
+        {/* ✅ หน้า AdminPage แยกออก ไม่ใช้ layout ของ App */}
+        <Route path="/adminpage" element={<AdminPage />} />
+
+        {/* ✅ หน้าอื่น ๆ ใช้ layout ปกติ */}
+        <Route path="/*" element={<App />} />
+      </Routes>
     </Router>
   );
 }
@@ -29,7 +42,7 @@ function App() {
 
   const [isAuthenticated, setIsAuthenticated] = useState(!!currentUser);
   const [isOpen, setIsOpen] = useState(false);
-  const hideHeaderRoutes = ["/camera", "/adminpage"];
+  const hideHeaderRoutes = ["/camera"];
   const location = useLocation();
   const shouldHideHeader = hideHeaderRoutes.includes(location.pathname);
 
@@ -50,7 +63,9 @@ function App() {
                 <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shadow-lg border border-black/40">
                   <span className="text-black font-bold text-sm">L&F</span>
                 </div>
-                <span className="text-xl font-extrabold tracking-wide text-white">Lost & Found</span>
+                <span className="text-xl font-extrabold tracking-wide text-white">
+                  Lost & Found
+                </span>
               </div>
 
               {/* Desktop Menu */}
@@ -68,7 +83,10 @@ function App() {
                     <NavLink to="/chats" label="Chats" />
                     <NavLink to="/profile" label="Profile" />
                     <NavLink to="/guidebook" label="Guidebook" />
-                    <LogoutButton setIsAuthenticated={setIsAuthenticated} setCurrentUser={setCurrentUser} />
+                    <LogoutButton
+                      setIsAuthenticated={setIsAuthenticated}
+                      setCurrentUser={setCurrentUser}
+                    />
                   </>
                 )}
               </div>
@@ -79,7 +97,11 @@ function App() {
                   onClick={() => setIsOpen(!isOpen)}
                   className="text-yellow-400 focus:outline-none relative z-80"
                 >
-                  {isOpen ? <span className="text-2xl">&#x2715;</span> : <span className="text-2xl">&#9776;</span>}
+                  {isOpen ? (
+                    <span className="text-2xl">&#x2715;</span>
+                  ) : (
+                    <span className="text-2xl">&#9776;</span>
+                  )}
                 </button>
               </div>
             </div>
@@ -92,16 +114,43 @@ function App() {
               <NavLink to="/lost" label="Lost" onClick={() => setIsOpen(false)} />
               {!isAuthenticated ? (
                 <>
-                  <NavLink to="/guidebook" label="Guidebook" onClick={() => setIsOpen(false)} />
-                  <NavLink to="/login" label="Login" onClick={() => setIsOpen(false)} />
-                  <NavLink to="/register" label="Register" onClick={() => setIsOpen(false)} />
+                  <NavLink
+                    to="/guidebook"
+                    label="Guidebook"
+                    onClick={() => setIsOpen(false)}
+                  />
+                  <NavLink
+                    to="/login"
+                    label="Login"
+                    onClick={() => setIsOpen(false)}
+                  />
+                  <NavLink
+                    to="/register"
+                    label="Register"
+                    onClick={() => setIsOpen(false)}
+                  />
                 </>
               ) : (
                 <>
-                  <NavLink to="/chats" label="Chats" onClick={() => setIsOpen(false)} />
-                  <NavLink to="/profile" label="Profile" onClick={() => setIsOpen(false)} />
-                  <NavLink to="/guidebook" label="Guidebook" onClick={() => setIsOpen(false)} />
-                  <LogoutButton setIsAuthenticated={setIsAuthenticated} setCurrentUser={setCurrentUser} />
+                  <NavLink
+                    to="/chats"
+                    label="Chats"
+                    onClick={() => setIsOpen(false)}
+                  />
+                  <NavLink
+                    to="/profile"
+                    label="Profile"
+                    onClick={() => setIsOpen(false)}
+                  />
+                  <NavLink
+                    to="/guidebook"
+                    label="Guidebook"
+                    onClick={() => setIsOpen(false)}
+                  />
+                  <LogoutButton
+                    setIsAuthenticated={setIsAuthenticated}
+                    setCurrentUser={setCurrentUser}
+                  />
                 </>
               )}
             </div>
@@ -118,22 +167,31 @@ function App() {
         {shouldHideHeader ? (
           <Routes>
             <Route path="/camera" element={<CameraPage />} />
-            <Route path="/adminpage" element={<AdminPage />} />
           </Routes>
         ) : (
           <div className="w-full max-w-6xl text-white py-10">
             <Routes>
               <Route path="/" element={<UploadPage />} />
-              <Route path="/lost" element={<Lost currentUserId={currentUser?.id} />} />
-              <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
+              <Route
+                path="/lost"
+                element={<Lost currentUserId={currentUser?.id} />}
+              />
+              <Route
+                path="/login"
+                element={<Login setIsAuthenticated={setIsAuthenticated} />}
+              />
               <Route path="/register" element={<Register />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/camera" element={<CameraPage />} />
               <Route path="/searchItem" element={<SearchPage />} />
-              <Route path="/chat/:chatId" element={<ChatPage currentUserId={currentUser?.id} />} />
+              <Route
+                path="/chat/:chatId"
+                element={<ChatPage currentUserId={currentUser?.id} />}
+              />
               <Route path="/guidebook" element={<GuideBook />} />
-              <Route path="/adminpage" element={<AdminPage />} />
-              <Route path="/chats" element={<ListChat currentUserId={currentUser?.id} />} />
+              <Route
+                path="/chats"
+                element={<ListChat currentUserId={currentUser?.id} />}
+              />
             </Routes>
           </div>
         )}
@@ -147,9 +205,13 @@ function App() {
               <div className="w-7 h-7 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shadow-md border border-black/40">
                 <span className="text-black font-bold text-xs">L&F</span>
               </div>
-              <span className="text-base font-extrabold text-white">Lost & Found</span>
+              <span className="text-base font-extrabold text-white">
+                Lost & Found
+              </span>
             </div>
-            <p className="text-gray-500 text-sm">&copy; 2025 Lost & Found. All Rights Reserved.</p>
+            <p className="text-gray-500 text-sm">
+              &copy; 2025 Lost & Found. All Rights Reserved.
+            </p>
           </div>
         </footer>
       )}
