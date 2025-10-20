@@ -236,185 +236,177 @@ const stats = [
     ))}
   </div>
 
-  {/* Tabs */}
-  <div className="flex space-x-2 overflow-x-auto bg-white p-2 rounded-xl">
-    {[
-      { id: "users", label: "Users", icon: Users },
-      { id: "items", label: "Items", icon: FileText },
-      { id: "logs", label: "Admin Logs", icon: Activity },
-    ].map(tab => (
-      <button
-        key={tab.id}
-        onClick={() => setActiveTab(tab.id)}
-        className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium whitespace-nowrap ${
-          activeTab === tab.id ? "bg-yellow-400 text-black" : "bg-blue-800 hover:bg-yellow-400"
-        }`}
-      >
-        <tab.icon size={18} />
-        <span>{tab.label}</span>
-      </button>
-    ))}
-  </div>
+ {/* Tabs */}
+<div className="flex flex-wrap sm:flex-nowrap space-x-0 sm:space-x-2 overflow-x-auto bg-white p-2 rounded-xl">
+  {[
+    { id: "users", label: "Users", icon: Users },
+    { id: "items", label: "Items", icon: FileText },
+    { id: "logs", label: "Admin Logs", icon: Activity },
+  ].map(tab => (
+    <button
+      key={tab.id}
+      onClick={() => setActiveTab(tab.id)}
+      className={`flex items-center m-2 space-x-4 px-4 py-2 rounded-xl font-medium whitespace-nowrap min-w-[150px] text-center
+        ${activeTab === tab.id ? "bg-yellow-400 text-black" : "bg-blue-800 hover:bg-yellow-400"}
+      `}
+    >
+      <tab.icon size={18} />
+      <span className="truncate">{tab.label}</span>
+    </button>
+  ))}
+</div>
 
-  {/* Content */}
-  <motion.div
-    key={activeTab}
-    ref={contentRef}
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="flex-1 overflow-y-auto p-4 bg-white rounded-2xl border border-blue-800"
-  >
-    {loading ? (
-      <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto"></div>
-        <p className="mt-4 text-black">Loading...</p>
-      </div>
-    ) : (
-      <>
-        {/* Users Tab */}
-        {activeTab === "users" && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-black/40">
-                  <th className="text-left py-3 px-4 text-black">ID</th>
-                  <th className="text-left py-3 px-4 text-black">Username</th>
-                  <th className="text-left py-3 px-4 text-black">Role</th>
-                  <th className="text-left py-3 px-4 text-black">Actions</th>
+{/* Content */}
+<motion.div
+  key={activeTab}
+  ref={contentRef}
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  className="flex-1 overflow-x-auto sm:overflow-x-visible overflow-y-auto p-4 bg-white rounded-2xl border border-blue-800"
+>
+  {loading ? (
+    <div className="text-center py-12">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto"></div>
+      <p className="mt-4 text-black">Loading...</p>
+    </div>
+  ) : (
+    <>
+      {/* Users Tab */}
+      {activeTab === "users" && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[500px] sm:min-w-full table-auto">
+            <thead>
+              <tr className="border-b border-black/40">
+                <th className="text-left py-3 px-4 text-black">ID</th>
+                <th className="text-left py-3 px-4 text-black">Username</th>
+                <th className="text-left py-3 px-4 text-black">Role</th>
+                <th className="text-left py-3 px-4 text-black">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u.id} className="border-b border-black/40 hover:bg-blue-600/30 text-black">
+                  <td className="py-4 px-4 font-medium">{u.id}</td>
+                  <td className="py-4 px-4 font-medium">{u.username}</td>
+                  <td className="py-4 px-4">
+                    <span className={`px-4 py-2 rounded-full text-sm ${u.role === 'admin' ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white'}`}>
+                      {u.role || 'user'}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4 flex flex-wrap gap-2">
+                    {u.role !== 'admin' ? (
+                      <>
+                        <button onClick={() => handleMakeAdmin(u.id)} className="px-3 py-1 bg-yellow-400 text-white rounded-lg text-sm">Make Admin</button>
+                        <button onClick={() => handleDeleteUser(u.id)} className="text-red-500"><Trash2 size={18} /></button>
+                      </>
+                    ) : (
+                      u.id !== currentUser?.id && (
+                        <button onClick={() => handleRemoveAdmin(u.id)} className="px-3 py-1 bg-blue-800 text-white rounded-lg text-sm">Remove Admin</button>
+                      )
+                    )}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.id} className="border-b border-black/40 hover:bg-blue-600/30 text-black">
-                    <td className="py-4 px-4 font-medium">{u.id}</td>
-                    <td className="py-4 px-4 font-medium">{u.username}</td>
-                    <td className="py-4 px-4">
-                      <span className={`px-4 py-2  rounded-full text-sm ${
-                        u.role === 'admin' ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white'
-                      }`}>
-                        {u.role || 'user'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 flex space-x-2">
-                      {u.role !== 'admin' ? (
-                        <>
-                          <button onClick={() => handleMakeAdmin(u.id)} className="px-3 py-1 bg-yellow-400 text-white rounded-lg text-sm">Make Admin</button>
-                          <button onClick={() => handleDeleteUser(u.id)} className="text-red-500"><Trash2 size={18} /></button>
-                        </>
-                      ) : (
-                        u.id !== currentUser?.id && (
-                          <button onClick={() => handleRemoveAdmin(u.id)} className="px-3 py-1 bg-blue-800 text-white rounded-lg text-sm">Remove Admin</button>
-                        )
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {users.length === 0 && <p className="text-center text-blue-200 py-8">No users found</p>}
-          </div>
-        )}
-
-        {/* Items Tab */}
-        {activeTab === "items" && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-black/40">
-                  <th className="text-left py-3 px-4 text-black">ID</th>
-                  <th className="text-left py-3 px-4 text-black">Image</th>
-                  <th className="text-left py-3 px-4 text-black">Title</th>
-                  <th className="text-left py-3 px-4 text-black">Category</th>
-                  <th className="text-left py-3 px-4 text-black">User ID</th>
-                  <th className="text-left py-3 px-4 text-black">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map(i => (
-                  <tr key={i.id} className="border-b border-black/40 hover:bg-blue-600/30">
-                    <td className="text-black font-medium py-4 px-4">{i.id}</td>
-                    <td className="py-4 px-4">
-                      {i.image ? (
-                        <img src={`data:image/jpeg;base64,${i.image}`} alt={i.title} className="w-16 h-16 object-cover rounded-lg border border-black/40" />
-                      ) : <span className="text-black">No image</span>}
-                    </td>
-                    <td className="text-black py-4 px-4 font-medium">{i.title}</td>
-                    <td className="py-4 px-4">
-                      <span className={`px-3 py-1 rounded-full text-sm ${
-                        i.category === "Lost" ? "bg-red-500/20 text-red-500" : "bg-green-500 text-white"
-                      }`}>
-                        {i.category}
-                      </span>
-                    </td>
-                    <td className="text-black font-medium py-4 px-4">{i.user_id}</td>
-                    <td className="py-4 px-4">
-                      <button onClick={() => handleDeleteItem(i.id)} className="text-red-400"><Trash2 size={18} /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {items.length === 0 && <p className="text-center text-black py-8">No items found</p>}
-          </div>
-        )}
-
-
-         
-{activeTab === "logs" && (
-  <div className="space-y-6 p-2">
-    {["login", "logout", "delete_user", "delete_post"].map(type => {
-      const filteredLogs = logs
-        .filter(log => log.action_type === type)
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-      if (filteredLogs.length === 0) return null;
-
-      const typeLabels = {
-        login: "🟢 Login Logs",
-        logout: "🔴 Logout Logs",
-        delete_user: "🗑️ Delete User Logs",
-        delete_post: "🧾 Delete Post Logs",
-      };
-
-      return (
-        <div key={type}>
-          <h3 className="text-lg text-black font-semibold mb-3 border-b border-gray-600 pb-1">
-            {typeLabels[type]} ({filteredLogs.length})
-          </h3>
-          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-            {filteredLogs.map((log, index) => (
-              <motion.div
-                key={log.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="bg-blue-600/30 text-black rounded-xl p-4 border border-black flex justify-between items-center"
-              >
-                <div>
-                  <p className="font-medium">{log.action}</p>
-                  <p className="text-sm text-black">
-                    by {log.admin_username || log.username} |{" "}
-                    <span className="italic">{log.action_type}</span>
-                  </p>
-                </div>
-                <p className="text-sm text-black">
-                  {new Date(log.timestamp).toLocaleString()}
-                </p>
-              </motion.div>
-            ))}
-          </div>
+              ))}
+            </tbody>
+          </table>
+          {users.length === 0 && <p className="text-center text-black py-8">No users found</p>}
         </div>
-      );
-    })}
+      )}
 
-    {logs.length === 0 && (
-      <p className="text-center text-gray-400 py-8">No admin logs yet</p>
-    )}
-  </div>
-)}
+      {/* Items Tab */}
+      {activeTab === "items" && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px] sm:min-w-full table-auto">
+            <thead>
+              <tr className="border-b border-black/40">
+                <th className="text-left py-3 px-4 text-black">ID</th>
+                <th className="text-left py-3 px-4 text-black">Image</th>
+                <th className="text-left py-3 px-4 text-black">Title</th>
+                <th className="text-left py-3 px-4 text-black">Category</th>
+                <th className="text-left py-3 px-4 text-black">User ID</th>
+                <th className="text-left py-3 px-4 text-black">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map(i => (
+                <tr key={i.id} className="border-b border-black/40 hover:bg-blue-600/30">
+                  <td className="text-black font-medium py-4 px-4">{i.id}</td>
+                  <td className="py-4 px-4">
+                    {i.image ? (
+                      <img src={`data:image/jpeg;base64,${i.image}`} alt={i.title} className="w-16 h-16 object-cover rounded-lg border border-black/40" />
+                    ) : <span className="text-black">No image</span>}
+                  </td>
+                  <td className="text-black py-4 px-4 font-medium">{i.title}</td>
+                  <td className="py-4 px-4">
+                    <span className={`px-3 py-1 rounded-full text-sm ${i.category === "Lost" ? "bg-red-500/20 text-red-500" : "bg-green-500 text-white"}`}>
+                      {i.category}
+                    </span>
+                  </td>
+                  <td className="text-black font-medium py-4 px-4">{i.user_id}</td>
+                  <td className="py-4 px-4 flex flex-wrap gap-2">
+                    <button onClick={() => handleDeleteItem(i.id)} className="text-red-400"><Trash2 size={18} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {items.length === 0 && <p className="text-center text-black py-8">No items found</p>}
+        </div>
+      )}
 
-          </>
-        )}
-      </motion.div>
+      {/* Logs Tab */}
+      {activeTab === "logs" && (
+        <div className="space-y-6 p-2">
+          {["login", "logout", "delete_user", "delete_post"].map(type => {
+            const filteredLogs = logs
+              .filter(log => log.action_type === type)
+              .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            if (filteredLogs.length === 0) return null;
+
+            const typeLabels = {
+              login: "🟢 Login Logs",
+              logout: "🔴 Logout Logs",
+              delete_user: "🗑️ Delete User Logs",
+              delete_post: "🧾 Delete Post Logs",
+            };
+
+            return (
+              <div key={type}>
+                <h3 className="text-lg text-black font-semibold mb-3 border-b border-blue-800 pb-1 w-full">
+                  {typeLabels[type]} ({filteredLogs.length})
+                </h3>
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                  {filteredLogs.map((log) => (
+                    <motion.div
+                      key={log.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="bg-blue-600/30 text-black rounded-xl p-4 border border-black flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
+                    >
+                      <div>
+                        <p className="font-medium truncate">{log.action}</p>
+                        <p className="text-sm text-black truncate">
+                          by {log.admin_username || log.username} | <span className="italic">{log.action_type}</span>
+                        </p>
+                      </div>
+                      <p className="text-sm text-black whitespace-nowrap">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {logs.length === 0 && <p className="text-center text-gray-400 py-8">No admin logs yet</p>}
+        </div>
+      )}
+    </>
+  )}
+</motion.div>
+
 
       {errorMsg && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
