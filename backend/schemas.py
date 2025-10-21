@@ -69,17 +69,24 @@ class MessageBase(BaseModel):
     message: str  # เนื้อหาข้อความ
 
 class MessageCreate(MessageBase):
-    # ใช้สร้างข้อความใหม่
-    sender_id: int  # ผู้ส่ง
-    chat_id: int  # ห้องแชท
+    sender_id: int
+    chat_id: int
+    image_data: Optional[bytes] = None
+    image_content_type: Optional[str] = None
+    image_filename: Optional[str] = None
+
 
 class MessageOut(MessageBase):
-    # แสดงข้อความพร้อมข้อมูลเพิ่มเติม
-    id: int  # ID ข้อความ
-    chat_id: int  # ห้องแชท
-    sender_id: int  # ผู้ส่ง
-    created_at: datetime  # เวลาสร้าง
-    username: Optional[str] = None  # ชื่อผู้ส่ง
+    id: int
+    chat_id: int
+    sender_id: int
+    created_at: datetime
+    username: Optional[str] = None
+    image_data: Optional[str] = None  # Base64 สำหรับ frontend
+    image_filename: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
     class Config:
         from_attributes = True

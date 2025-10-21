@@ -7,6 +7,7 @@ const ChatPage = ({ currentUserId }) => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -68,24 +69,36 @@ const ChatPage = ({ currentUserId }) => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
 
+  // ✅ ฟังก์ชันส่งข้อความ + รูปภาพ
   const sendMessage = async () => {
     const text = input.trim();
-    if (!text) return;
+    if (!text && !imageFile) return;
 
     const tempId = `temp-${Date.now()}`;
-    const newMsg = { chat_id: Number(chatId), sender_id: Number(currentUserId), message: text };
+    const newMsg = {
+      id: tempId,
+      chat_id: Number(chatId),
+      sender_id: Number(currentUserId),
+      message: text,
+      created_at: new Date().toISOString(),
+      username: "You",
+      image: imageFile ? URL.createObjectURL(imageFile) : null,
+    };
 
-    setMessages((prev) => [
-      ...prev,
-      { ...newMsg, id: tempId, created_at: new Date().toISOString(), username: "You" },
-    ]);
+    setMessages((prev) => [...prev, newMsg]);
     setInput("");
+    setImageFile(null);
 
     try {
+      const formData = new FormData();
+      formData.append("chat_id", chatId);
+      formData.append("sender_id", currentUserId);
+      formData.append("message", text);
+      if (imageFile) formData.append("image", imageFile);
+
       const res = await fetch("http://localhost:8000/api/chats/messages/send", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newMsg),
+        body: formData,
       });
 
       if (await handleErrorResponse(res)) {
@@ -106,7 +119,7 @@ const ChatPage = ({ currentUserId }) => {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-gray-900 text-white z-50">
-      {/* App Header */}
+      {/* Header */}
       <nav className="w-full bg-[#111827] border-b border-gray-800 text-white shadow-md flex-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -116,7 +129,6 @@ const ChatPage = ({ currentUserId }) => {
             <span className="text-xl font-extrabold tracking-wide text-white">Lost & Found</span>
           </div>
 
-          {/* NavLinks */}
           <div className="hidden md:flex space-x-6">
             <NavLink to="/" label="Home" />
             <NavLink to="/lost" label="Lost" />
@@ -130,14 +142,12 @@ const ChatPage = ({ currentUserId }) => {
             ) : (
               <>
                 <NavLink to="/profile" label="Profile" />
-                 <NavLink to="/guidebook" label="Guidebook" />
+                <NavLink to="/guidebook" label="Guidebook" />
                 <LogoutButton setCurrentUser={setCurrentUser} />
-               
               </>
             )}
           </div>
 
-          {/* Hamburger */}
           <div className="md:hidden">
             <button onClick={() => setIsOpen(!isOpen)} className="text-yellow-400 focus:outline-none">
               {isOpen ? <span className="text-2xl">&#x2715;</span> : <span className="text-2xl">&#9776;</span>}
@@ -145,7 +155,6 @@ const ChatPage = ({ currentUserId }) => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden bg-[#1a1a1a] border-t border-gray-800 px-4 py-3 space-y-2">
             <NavLink to="/" label="Home" onClick={() => setIsOpen(false)} />
@@ -160,34 +169,25 @@ const ChatPage = ({ currentUserId }) => {
             ) : (
               <>
                 <NavLink to="/profile" label="Profile" onClick={() => setIsOpen(false)} />
-                 <NavLink to="/guidebook" label="Guidebook" onClick={() => setIsOpen(false)} />
+                <NavLink to="/guidebook" label="Guidebook" onClick={() => setIsOpen(false)} />
                 <LogoutButton setCurrentUser={setCurrentUser} />
-               
               </>
             )}
           </div>
         )}
       </nav>
 
-          {/* Chat Header */}
+      {/* Chat Header */}
       <div className="flex-none flex items-center p-4 border-b border-gray-700 justify-between">
         <div className="flex items-center">
           {chatHeader.itemImage && (
-            <img
-              src={chatHeader.itemImage}
-              alt={chatHeader.itemTitle}
-              className="w-12 h-12 object-cover rounded"
-            />
+            <img src={chatHeader.itemImage} alt={chatHeader.itemTitle} className="w-12 h-12 object-cover rounded" />
           )}
           <div className="flex flex-col ml-3">
-            {chatHeader.ownerUsername && (
-              <span className="text-lg font-bold">{chatHeader.ownerUsername}</span>
-            )}
+            {chatHeader.ownerUsername && <span className="text-lg font-bold">{chatHeader.ownerUsername}</span>}
             <span className="text-xs text-gray-400 font-medium">{chatHeader.itemTitle}</span>
           </div>
         </div>
-
-        {/* Back Button */}
         <button
           onClick={() => navigate("/chats")}
           className="ml-20 px-3 py-1 bg-blue-700 hover:bg-green-600 rounded text-m font-medium transition"
@@ -205,31 +205,27 @@ const ChatPage = ({ currentUserId }) => {
         ) : (
           messages.map((m) => {
             const isMine = m.sender_id === Number(currentUserId);
-
             return (
-              <div
-                key={m.id}
-                className={`flex ${isMine ? "justify-end" : "justify-start"}`}
-              >
+              <div key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                 <div
                   className={`inline-block px-4 py-2 break-words max-w-[70%] text-sm ${
                     isMine
-                      ? "bg-blue-500 text-white rounded-l-lg rounded-tr-lg"
-                      : "bg-gray-700 text-white rounded-r-lg rounded-tl-lg"
+                      ? "bg-blue-600 text-white  rounded-l-lg rounded-tr-lg"
+                      : "bg-white/10 text-white  rounded-r-lg rounded-tl-lg"
                   }`}
                 >
-                  {!isMine && (
-                    <span className="text-xs text-gray-300 font-semibold mb-1 block">
-                      {m.username}
-                    </span>
+                 
+                  {m.image && (
+                    <img
+                      src={m.image}
+                      alt="sent"
+                      className="max-w-[200px] max-h-[200px] rounded mb-2 bg-white"
+                    />
                   )}
-                  <span>{m.message}</span>
-                  <div className="text-xs text-gray-300 mt-1 text-right">
+                  {m.message && <span>{m.message}</span>}
+                  <div className="text-xs  text-white mt-1 text-right">
                     {m.created_at
-                      ? new Date(m.created_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                      ? new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                       : "-"}
                   </div>
                 </div>
@@ -240,39 +236,80 @@ const ChatPage = ({ currentUserId }) => {
         <div ref={bottomRef} />
       </div>
 
+     {/* Input Section */}
+<div className="flex-none flex items-center p-4 border-t border-gray-700 space-x-2 bg-gray-800">
+  {/* Preview รูปภาพก่อนส่ง */}
+  {imageFile && (
+    <div className="relative">
+      <img
+        src={URL.createObjectURL(imageFile)}
+        alt="preview"
+        className="w-20 h-20 object-cover rounded-lg border border-gray-600"
+      />
+      <button
+        onClick={() => setImageFile(null)}
+        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-700"
+      >
+        ×
+      </button>
+    </div>
+  )}
+
+  {/* ปุ่มเลือกไฟล์ */}
+ <label className="flex items-center justify-center w-12 h-12 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition">
+  <input
+    type="file"
+    accept="image/*,video/*" // ✅ รองรับเฉพาะรูปภาพและวิดีโอ
+    className="hidden"
+    onChange={(e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // ตรวจสอบ type ของไฟล์
+      if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+        alert("สามารถส่งได้เฉพาะไฟล์รูปภาพและวิดีโอเท่านั้น");
+        e.target.value = null; // ล้าง input
+        return;
+      }
+
+      setImageFile(file);
+    }}
+  />
+  <span className="text-yellow-400 text-2xl">📎</span>
+</label>
+
+  {/* Input ข้อความ */}
+  <input
+    className="flex-grow p-2 rounded-lg bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+    value={input}
+    onChange={(e) => setInput(e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sendMessage();
+      }
+    }}
+    placeholder="Type a message..."
+  />
+
+  {/* ปุ่มส่ง */}
+  <button
+    onClick={sendMessage}
+    className="px-4 py-2 rounded-lg bg-yellow-500 text-black font-semibold hover:bg-yellow-600 transition"
+  >
+    Send
+  </button>
+</div>
 
 
-      {/* Input */}
-      <div className="flex-none flex p-4 border-t border-gray-700">
-        <input
-          className="flex-grow p-2 rounded bg-gray-800 text-white placeholder-gray-400"
-          value={input}
-          autoFocus
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              sendMessage();
-            }
-          }}
-          placeholder="Type a message..."
-        />
-        <button className="ml-2 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700" onClick={sendMessage}>
-          Send
-        </button>
-      </div>
-
-      {/* Popup */}
+      {/* Error Popup */}
       {errorMsg && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-gray-800 text-white p-6 rounded-lg max-w-sm text-center">
             <p className="mb-4">{errorMsg}</p>
             <button
               className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
-              onClick={() => {
-                setErrorMsg(null);
-                navigate("/lost", { replace: true });
-              }}
+              onClick={() => setErrorMsg(null)}
             >
               OK
             </button>
@@ -283,7 +320,7 @@ const ChatPage = ({ currentUserId }) => {
   );
 };
 
-// NavLink & LogoutButton
+// 🔗 Reusable Components
 const NavLink = ({ to, label, onClick }) => (
   <Link
     to={to}
