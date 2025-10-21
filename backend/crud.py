@@ -4,7 +4,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import utils
 import models
 from models import User, Item, Chat, Message
-from schemas import UserCreate, ItemCreate, MessageCreate
+import schemas
 import bcrypt
 import io
 from fastapi import Depends, HTTPException, UploadFile
@@ -20,7 +20,7 @@ security = HTTPBearer()
 # ฟังก์ชันจัดการ User
 # ===========================
 
-def create_user(db: Session, user: UserCreate) -> User:
+def create_user(db: Session, user: schemas.UserCreate) -> User:
     hashed_pw = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode()
     db_user = User(username=user.username, password=hashed_pw, role="user")
     db.add(db_user)
@@ -41,14 +41,18 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
         return None
     return user
 
-
+def encode_file(file_data, file_content_type):
+    if not file_data:
+        return None
+    base64_data = base64.b64encode(file_data).decode("utf-8")
+    return f"data:{file_content_type};base64,{base64_data}"
 # ===========================
 # ฟังก์ชันจัดการ Item
 # ===========================
 
 def create_item(
     db: Session,
-    item: ItemCreate,
+    item: schemas.ItemCreate,
     image_bytes: bytes,
     image_filename: str,
     image_content_type: str,
@@ -143,17 +147,20 @@ def get_chats_for_user(db: Session, user_id: int) -> List[Chat]:
 # ฟังก์ชันจัดการ Message
 # ===========================
 
-def create_message(db: Session, msg: MessageCreate) -> Message:
-    db_msg = Message(
-        chat_id=msg.chat_id,
-        sender_id=msg.sender_id,
-        message=msg.message,
-        created_at=datetime.utcnow(),
+def create_message(db: Session, msg_in: schemas.MessageCreate):
+    msg = models.Message(
+        chat_id=msg_in.chat_id,
+        sender_id=msg_in.sender_id,
+        message=msg_in.message,
+        image_data=msg_in.image_data,
+        image_content_type=msg_in.image_content_type,
+        image_filename=msg_in.image_filename
     )
-    db.add(db_msg)
+    db.add(msg)
     db.commit()
-    db.refresh(db_msg)
-    return db_msg
+    db.refresh(msg)
+    return msg
+
 
 
 def get_messages_by_chat(db: Session, chat_id: int) -> List[Message]:
