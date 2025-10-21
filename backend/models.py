@@ -79,6 +79,10 @@ class Message(Base):
     chat_id = Column(Integer, ForeignKey("chats.id", ondelete="CASCADE"))  # ID ห้องแชท
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # ID ผู้ส่ง
     message = Column(Text, nullable=False)  # ข้อความ
+    image_data = Column(LargeBinary, nullable=True)
+    image_content_type = Column(String(100), nullable=True)
+    image_filename = Column(String(255), nullable=True)
+
     created_at = Column(DateTime(timezone=False), server_default=func.now())  # เวลาสร้าง
 
     chat = relationship("Chat", back_populates="messages")  # ความสัมพันธ์ไปยัง chat

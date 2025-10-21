@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
 import crud, models, schemas
 from crud import encode_image
 from database import get_db
+import base64
 
 router = APIRouter(prefix="/api/chats", tags=["Chats"])
 
@@ -49,16 +50,56 @@ def get_chat_messages(chat_id: int, user_id: int, db: Session = Depends(get_db))
         "sender_id": m.sender_id,
         "message": m.message,
         "created_at": m.created_at,
-        "username": m.sender.username
+        "username": m.sender.username,
+        "image": encode_image(m.image_data, m.image_content_type) if m.image_data else None
     } for m in messages]
 
+
+# ✅ แก้ไขส่วนนี้
 @router.post("/messages/send")
-def send_message(req: schemas.MessageSendRequest, db: Session = Depends(get_db)):
-    chat = db.query(models.Chat).filter(models.Chat.id == req.chat_id).first()
+async def send_message(
+    chat_id: int = Form(...),
+    sender_id: int = Form(...),
+    message: str = Form(""),
+    image: UploadFile = File(None),
+    db: Session = Depends(get_db)
+):
+    # ตรวจสอบว่าห้องแชทมีจริงไหม
+    chat = db.query(models.Chat).filter(models.Chat.id == chat_id).first()
     if not chat:
         raise HTTPException(status_code=404, detail="ไม่พบห้องแชทนี้")
-    if not crud.is_user_in_chat(db, req.chat_id, req.sender_id):
+
+    # ตรวจสอบสิทธิ์ของผู้ใช้
+    if not crud.is_user_in_chat(db, chat_id, sender_id):
         raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์ในห้องนี้")
-    msg_in = schemas.MessageCreate(chat_id=req.chat_id, sender_id=req.sender_id, message=req.message)
+
+    image_data = None
+    image_content_type = None
+    image_filename = None
+
+    # ถ้ามีอัปโหลดรูปภาพ
+    if image:
+        image_data = await image.read()
+        image_content_type = image.content_type
+        image_filename = image.filename
+
+    # ✅ ใช้ schema ใหม่ที่รองรับรูปภาพ
+    msg_in = schemas.MessageCreate(
+        chat_id=chat_id,
+        sender_id=sender_id,
+        message=message,
+        image_data=image_data,
+        image_content_type=image_content_type,
+        image_filename=image_filename
+    )
+
     msg = crud.create_message(db, msg_in)
-    return {"id": msg.id, "chat_id": msg.chat_id, "sender_id": msg.sender_id, "message": msg.message, "created_at": msg.created_at}
+
+    return {
+        "id": msg.id,
+        "chat_id": msg.chat_id,
+        "sender_id": msg.sender_id,
+        "message": msg.message,
+        "created_at": msg.created_at,
+        "image": encode_image(msg.image_data, msg.image_content_type) if msg.image_data else None
+    }
