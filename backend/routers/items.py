@@ -6,6 +6,7 @@ from ultralytics import YOLO
 import crud, schemas, utils
 from crud import encode_image
 from database import get_db
+import models
 
 router = APIRouter(prefix="/api", tags=["Items"])
 yolo_model = YOLO("best.pt")
@@ -141,6 +142,33 @@ def get_lost_items(db: Session = Depends(get_db)):
         for i in items
     ]
 
+@router.get("/items/user/{user_id}", response_model=list[schemas.ItemOut])
+def get_user_items(user_id: int, db: Session = Depends(get_db)):
+    items = db.query(models.Item).filter(models.Item.user_id == user_id).all()
+    return [
+        schemas.ItemOut(
+            id=i.id,
+            title=i.title,
+            type=i.type,
+            category=i.category,
+            image_data=encode_image(i.image_data, i.image_content_type),
+            boxed_image_data=encode_image(i.boxed_image_data, i.image_content_type),
+            original_image_data=encode_image(i.original_image_data, i.image_content_type) if i.original_image_data else None,
+            image_filename=i.image_filename,
+            user_id=i.user_id,
+            username=i.user.username if i.user else None
+        )
+        for i in items
+    ]
+
+@router.delete("/items/{item_id}")
+def delete_item(item_id: int, db: Session = Depends(get_db)):
+    item = db.query(models.Item).filter(models.Item.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    db.delete(item)
+    db.commit()
+    return {"message": "Item deleted successfully"}
 
 
 @router.get("/found-items", response_model=list[schemas.ItemOut])

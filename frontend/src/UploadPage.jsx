@@ -354,7 +354,7 @@ const UploadPage = () => {
 
   // ===================== UI =====================
   return (
-    <main className="flex items-center justify-center">
+    <main className="flex items-center justify-center h-full pt-16">
       <div className="w-full max-w-xl bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl p-6 space-y-4 text-white border-2 border-yellow-500 mx-auto">
 
 

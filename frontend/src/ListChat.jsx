@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Image as ImageIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const ListChat = ({ currentUserId }) => {
   const [chats, setChats] = useState([]);
+  const [userItems, setUserItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // ✅ โหลดรายการแชท
   useEffect(() => {
     if (!currentUserId) return;
 
@@ -26,27 +28,34 @@ const ListChat = ({ currentUserId }) => {
     };
 
     fetchChats();
+    return () => (isMounted = false);
+  }, [currentUserId]);
 
-    return () => {
-      isMounted = false;
+  // ✅ โหลดโพสต์ของ user
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const fetchUserItems = async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/api/items/user/${currentUserId}`);
+        if (!res.ok) throw new Error("Unable to retrieve user items");
+        const data = await res.json();
+        setUserItems(data);
+      } catch (err) {
+        console.error(err);
+      }
     };
+
+    fetchUserItems();
   }, [currentUserId]);
 
   if (loading)
     return (
-      <div className="flex justify-center items-center h-screen text-gray-400">
+      <div className="flex justify-center items-center  text-gray-400">
         Loading chats...
       </div>
     );
 
-  if (chats.length === 0)
-    return (
-      <div className="flex flex-col justify-center items-center h-screen text-gray-400">
-        No messages 😅
-      </div>
-    );
-
-  // เลือกคู่สนทนา (ไม่ใช่ตัวเราเอง)
   const getChatPartner = (chat) => {
     if (chat.user1_id === currentUserId) {
       return { id: chat.user2_id, username: chat.user2_username };
@@ -55,70 +64,141 @@ const ListChat = ({ currentUserId }) => {
   };
 
   return (
-    <div className="flex justify-end bg-gray-900 text-white min-h-screen">
-      <div className="w-[500px] border-l border-gray-800 shadow-lg bg-gray-900">
-        {/* Header */}
-        <div className="sticky top-0 bg-gray-900 z-20 px-5 pt-4 pb-6 border-b border-white/40">
-          <h2 className="text-2xl font-bold">Messages</h2>
-        </div>
+ <div className="flex bg-gray-900 text-white h-full pt-16">
+  {/* 🔹 ฝั่งซ้าย: โพสต์ของ user */}
+  <div className="w-full sm:w-1/2 border-r border-white/40 p-5 overflow-y-auto">
+    <h2 className="text-2xl font-bold mb-5">My Posts</h2>
 
-        {/* Chat List */}
-        <div className="divide-y divide-gray-800">
-          {chats.map((chat) => {
-            const partner = getChatPartner(chat);
-
-            return (
-              <div
-                key={chat.chat_id}
-                onClick={() =>
-                  navigate(`/chat/${chat.chat_id}`, {
-                    state: {
-                      currentUserId,
-                      otherUserId: partner.id,
-                      ownerUsername: partner.username,
-                      itemImage: chat.item_image || null,
-                      itemTitle: chat.item_title || null,
-                    },
-                  })
-                }
-                className="flex items-center gap-3 p-4 hover:bg-gray-800 cursor-pointer transition-colors duration-200"
-              >
-                {/* Avatar หรือ Item Image */}
-                {chat.item_image ? (
-                  <img
-                    src={chat.item_image}
-                    alt="item"
-                    className="w-12 h-12 object-cover rounded-lg"
-                  />
-                ) : (
-                  <div className="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center text-gray-300">
-                    <MessageCircle size={22} />
-                  </div>
-                )}
-
-                {/* Chat Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{partner.username}</p>
-                  {chat.item_title && (
-                    <p className="text-sm text-white/80 truncate">{chat.item_title}</p>
-                  )}
-                </div>
-
-                {/* เวลา */}
-                <p className="text-xs text-white whitespace-nowrap">
-                  {new Date(chat.created_at).toLocaleString("en-EN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    day: "2-digit",
-                    month: "short",
-                  })}
-                </p>
+    {userItems.length === 0 ? (
+      <p className="text-gray-400">You haven’t posted anything yet 😅</p>
+    ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {userItems.map((item) => (
+          <div
+            key={item.id}
+            className="bg-gray-800 rounded-xl p-3 hover:bg-gray-700 cursor-pointer transition flex flex-col"
+          >
+            {item.image_data ? (
+              <img
+                src={item.image_data}
+                alt={item.title}
+                className="w-full h-32 object-cover rounded-lg"
+              />
+            ) : (
+              <div className="w-full h-32 bg-gray-700 rounded-lg flex justify-center items-center">
+                <ImageIcon size={32} className="text-gray-400" />
               </div>
-            );
-          })}
-        </div>
+            )}
+            <p className="mt-2 font-medium truncate">{item.title}</p>
+            <p className="text-sm text-gray-400">{item.category}</p>
+
+            {/* 🔹 ปุ่มลบอยู่ขวาสุด */}
+            <div className="flex justify-end mt-2">
+              <button
+                onClick={async () => {
+                  if (window.confirm(`Delete "${item.title}" ?`)) {
+                    try {
+                      const res = await fetch(`http://localhost:8000/api/items/${item.id}`, {
+                        method: "DELETE",
+                      });
+                      if (res.ok) {
+                        setUserItems((prev) => prev.filter((i) => i.id !== item.id));
+                      } else {
+                        alert("Failed to delete item");
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      alert("Error deleting item");
+                    }
+                  }
+                }}
+                className="bg-red-500 hover:bg-red-600 text-white text-sm font-medium px-2 py-1 rounded"
+              >
+                🗑️
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
+    )}
+  </div>
+
+  {/* 🔹 ฝั่งขวา: รายการแชท */}
+ <div className="w-full sm:w-1/2 overflow-y-auto">
+  <div className="sticky top-0 bg-gray-900 z-20 px-5 pt-4 pb-6 border-b border-white/50">
+    <h2 className="text-2xl font-bold">Messages</h2>
+  </div>
+
+  {chats.length === 0 ? (
+    <div className="flex flex-col justify-center items-center h-full text-gray-400 p-5">
+      No messages 😅
     </div>
+  ) : (
+    <div className="divide-y divide-gray-800">
+      {chats.map((chat) => {
+        const partner = getChatPartner(chat);
+        return (
+          <div
+            key={chat.chat_id}
+            onClick={() =>
+              navigate(`/chat/${chat.chat_id}`, {
+                state: {
+                  currentUserId,
+                  otherUserId: partner.id,
+                  ownerUsername: partner.username,
+                  itemImage: chat.item_image || null,
+                  itemTitle: chat.item_title || null,
+                },
+              })
+            }
+            className="flex items-center gap-3 p-4 hover:bg-gray-800 cursor-pointer transition-colors duration-200"
+          >
+            {chat.item_image ? (
+              <img
+                src={chat.item_image}
+                alt="item"
+                className="w-12 h-12 object-cover rounded-lg"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center text-gray-300">
+                <MessageCircle size={22} />
+              </div>
+            )}
+
+            <div className="flex-1 min-w-0">
+              <p className="font-medium truncate">{partner.username}</p>
+
+              {chat.item_title && (
+                <>
+                  {/* แสดง item title ปกติ */}
+                  <p className="text-sm text-white/80 truncate hidden sm:block">{chat.item_title}</p>
+                  {/* แสดง item title + username ตอนย่อ */}
+                  <p className="text-sm text-white/80 truncate block sm:hidden">
+                    {partner.username} - {chat.item_title}
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* เวลา: แสดงเฉพาะหน้าจอ sm ขึ้นไป */}
+            <p className="text-xs text-white whitespace-nowrap hidden sm:block">
+              {new Date(chat.created_at).toLocaleString("en-EN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                day: "2-digit",
+                month: "short",
+              })}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  )}
+</div>
+
+</div>
+
+
   );
 };
 
