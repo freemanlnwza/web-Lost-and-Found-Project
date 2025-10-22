@@ -26,9 +26,7 @@ const Lost = ({ currentUserId }) => {
       }
     };
     fetchLostItems();
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [currentUserId]);
 
   const handleChat = async (otherUserId, itemId, ownerUsername, itemImage, itemTitle) => {
@@ -65,63 +63,73 @@ const Lost = ({ currentUserId }) => {
   }
 
   return (
-    <main
-      key={currentUserId}
-      className="min-h-screen bg-gray-800 bg-opacity-90 text-white py-12 px-4 sm:px-6 lg:px-8 duration-700 rounded-2xl shadow-2xl border-2 border-yellow-500 mx-auto relative"
-    >
+    <main className="h-full w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white pt-165 px-4 sm:px-6 lg:px-8">
+      {/* pt-32 เว้นที่บนสำหรับ App header */}
+
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-12 sticky top-20 z-40 bg-gray-800 bg-opacity-90 backdrop-blur-md py-4 px-4 rounded-xl shadow-md">
-          <div className="flex-1 text-center">
-            <h1 className="text-4xl md:text-5xl font-extrabold mb-2">Reported Lost Items</h1>
-            <p className="text-gray-400 text-lg">Help reunite lost items with their owners</p>
-          </div>
+        {/* Header ของ Lost */}
+ <div className="sticky top-16 z-40 bg-gray-900 bg-opacity-90 backdrop-blur-md py-4 px-4 sm:px-6 lg:px-8 rounded-b-3xl shadow-lg flex items-center justify-between flex-wrap gap-3">
+  {/* Left: Title */}
+  <div className="flex-1 min-w-0">
+    <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold truncate mb-1">
+      Reported Lost Items
+    </h1>
+    <p className="text-gray-400 text-sm sm:text-base truncate">
+      Help reunite lost items with their owners
+    </p>
+  </div>
 
-          <button
-            onClick={() => setShowActualImage(!showActualImage)}
-            className={`ml-4 p-3 rounded-full transition-all flex items-center justify-center ${
-              showActualImage ? "bg-white" : "bg-yellow-500 hover:bg-yellow-600"
-            }`}
-            title={showActualImage ? "Show Container-Fit" : "Show Actual Image"}
-          >
-            <img src="/public/arrow.png" alt="Toggle Image" className="h-5 w-5" />
-          </button>
-        </div>
+  {/* Right: Toggle Button aligned center */}
+  <div className="flex-shrink-0 flex items-center">
+    <button
+      onClick={() => setShowActualImage(!showActualImage)}
+      className={`p-3 rounded-full transition-all flex items-center justify-center ${
+        showActualImage ? "bg-white" : "bg-yellow-500 hover:bg-yellow-600"
+      }`}
+      title={showActualImage ? "Show Container-Fit" : "Show Actual Image"}
+    >
+      <img src="/public/arrow.png" alt="Toggle Image" className="h-4 w-4" />
+    </button>
+  </div>
+</div>
 
-        <div className="pt-4">
+        {/* Items Grid */}
+        <div className="pt-20">
           {items.length === 0 ? (
             <div className="text-center py-20">
-              <div className="bg-gray-800/50 backdrop-blur-lg rounded-3xl border border-gray-700 p-12 max-w-md mx-auto">
+              <div className="bg-gray-900/70 backdrop-blur-lg rounded-3xl border border-gray-700 p-12 max-w-md mx-auto">
                 <div className="text-6xl mb-4">🔍</div>
                 <p className="text-gray-300 text-xl font-medium mb-2">No lost items reported yet</p>
                 <p className="text-gray-500">Be the first to report a lost item</p>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="group relative bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 rounded-3xl shadow-xl overflow-hidden hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300"
+                  className="group relative bg-gray-900 border border-gray-700/50 rounded-3xl shadow-lg overflow-hidden hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-1 transition-all duration-300"
                 >
-                  <div className="relative w-full h-64 overflow-hidden rounded-3xl bg-gray-800">
+                  {/* Image */}
+                  <div className="relative w-full h-48 overflow-hidden rounded-t-3xl bg-gray-800">
                     <img
                       src={showActualImage ? item.original_image_data : item.image_data}
                       alt={item.title}
                       className={showActualImage ? "w-full h-full object-contain" : "w-full h-full object-cover"}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-60"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-50"></div>
                   </div>
 
-                  <div className="p-6 space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <span className="text-3xl flex-shrink-0">{item.type === "lost" ? "🏷️" : "📦"}</span>
-                      <h2 className="text-xl font-bold text-white leading-tight group-hover:text-blue-400 transition-colors">
+                  {/* Content */}
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-start space-x-2">
+                      <span className="text-2xl flex-shrink-0">{item.type === "lost" ? "🏷️" : "📦"}</span>
+                      <h2 className="text-lg font-bold text-white leading-tight group-hover:text-blue-400 transition-colors">
                         {item.title}
                       </h2>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <div className="flex items-center space-x-2 text-gray-300">
                         <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                         <span className="text-sm">
@@ -132,7 +140,7 @@ const Lost = ({ currentUserId }) => {
 
                       {item.user_id !== currentUserId && (
                         <div className="flex items-center space-x-2 text-gray-300">
-                          <User size={16} className="text-purple-400" />
+                          <User size={14} className="text-purple-400" />
                           <span className="text-sm">
                             <span className="text-gray-500">Reported by:</span>{" "}
                             <span className="font-medium">{item.username}</span>
@@ -142,29 +150,28 @@ const Lost = ({ currentUserId }) => {
 
                       {item.location && (
                         <div className="flex items-center space-x-2 text-gray-300">
-                          <MapPin size={16} className="text-green-400" />
+                          <MapPin size={14} className="text-green-400" />
                           <span className="text-sm font-medium">{item.location}</span>
                         </div>
                       )}
 
                       {item.created_at && (
                         <div className="flex items-center space-x-2 text-gray-400">
-                          <Calendar size={14} />
+                          <Calendar size={12} />
                           <span className="text-xs">{new Date(item.created_at).toLocaleDateString()}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="mt-auto">
-                      <button
-                        onClick={() =>
-                          handleChat(item.user_id, item.id, item.username, item.image_data, item.title)
-                        }
-                        className="w-full py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 transition-all"
-                      >
-                        💬 Chat
-                      </button>
-                    </div>
+                    <button
+                      onClick={() =>
+                        handleChat(item.user_id, item.id, item.username, item.image_data, item.title)
+                      }
+                      className="w-full py-1.5 rounded-lg font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 transition-all text-sm flex items-center justify-center"
+                    >
+                      <MessageCircle className="inline mr-1 w-4 h-4" />
+                      Chat
+                    </button>
                   </div>
                 </div>
               ))}

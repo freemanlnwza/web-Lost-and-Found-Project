@@ -19,6 +19,7 @@ import GuideBook from "./GuideBook.jsx";
 import AdminPage from "./AdminPage.jsx";
 import ListChat from "./ListChat.jsx";
 
+
 // ✅ Wrapper สำหรับ Router
 function AppWrapper() {
   return (
@@ -160,16 +161,16 @@ function App() {
 
       {/* Content */}
       <main
-        className={`flex-1 flex ${
-          !shouldHideHeader ? "pt-24 bg-[#111827]" : "bg-black"
-        } justify-center items-center`}
+        className={`flex-1 flex  ${
+          !shouldHideHeader ? " bg-[#111827]" : "bg-black"
+        } `}
       >
         {shouldHideHeader ? (
           <Routes>
             <Route path="/camera" element={<CameraPage />} />
           </Routes>
         ) : (
-          <div className="w-full max-w-6xl text-white py-10">
+          <div className="w-full  text-white ">
             <Routes>
               <Route path="/" element={<UploadPage />} />
               <Route
@@ -192,6 +193,7 @@ function App() {
                 path="/chats"
                 element={<ListChat currentUserId={currentUser?.id} />}
               />
+              
             </Routes>
           </div>
         )}
