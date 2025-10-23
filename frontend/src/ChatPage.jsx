@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
+import { MdDeleteOutline } from "react-icons/md"; // ✅ ไอคอนลบ
 
 const ChatPage = ({ currentUserId }) => {
   const { chatId } = useParams();
@@ -36,13 +37,11 @@ const ChatPage = ({ currentUserId }) => {
 
   useEffect(() => {
     if (!chatId) return;
-
     const fetchChatMessages = async () => {
       try {
         const res = await fetch(
           `http://localhost:8000/api/chats/${chatId}/messages?user_id=${currentUserId}`
         );
-
         if (await handleErrorResponse(res)) return;
 
         const messagesData = await res.json();
@@ -61,7 +60,6 @@ const ChatPage = ({ currentUserId }) => {
         setLoading(false);
       }
     };
-
     fetchChatMessages();
   }, [chatId, currentUserId, chatHeader.ownerUsername]);
 
@@ -117,6 +115,26 @@ const ChatPage = ({ currentUserId }) => {
     }
   };
 
+  // ✅ ฟังก์ชันลบข้อความ
+  const deleteMessage = async (id) => {
+    if (!window.confirm("คุณต้องการลบข้อความนี้หรือไม่?")) return;
+    try {
+      const res = await fetch(
+        `http://localhost:8000/api/chats/messages/${id}/delete?user_id=${currentUserId}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.detail || "ลบไม่สำเร็จ");
+        return;
+      }
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+    } catch (err) {
+      console.error(err);
+      alert("เกิดข้อผิดพลาดในการลบข้อความ");
+    }
+  };
+
   return (
     <div className="fixed inset-0 flex flex-col bg-gray-900 text-white z-50">
       {/* Header */}
@@ -126,7 +144,9 @@ const ChatPage = ({ currentUserId }) => {
             <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shadow-lg border border-black/40">
               <span className="text-black font-bold text-sm">L&F</span>
             </div>
-            <span className="text-xl font-extrabold tracking-wide text-white">Lost & Found</span>
+            <span className="text-xl font-extrabold tracking-wide text-white">
+              Lost & Found
+            </span>
           </div>
 
           <div className="hidden md:flex space-x-6">
@@ -149,8 +169,15 @@ const ChatPage = ({ currentUserId }) => {
           </div>
 
           <div className="md:hidden">
-            <button onClick={() => setIsOpen(!isOpen)} className="text-yellow-400 focus:outline-none">
-              {isOpen ? <span className="text-2xl">&#x2715;</span> : <span className="text-2xl">&#9776;</span>}
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="text-yellow-400 focus:outline-none"
+            >
+              {isOpen ? (
+                <span className="text-2xl">&#x2715;</span>
+              ) : (
+                <span className="text-2xl">&#9776;</span>
+              )}
             </button>
           </div>
         </div>
@@ -159,7 +186,9 @@ const ChatPage = ({ currentUserId }) => {
           <div className="md:hidden bg-[#1a1a1a] border-t border-gray-800 px-4 py-3 space-y-2">
             <NavLink to="/" label="Home" onClick={() => setIsOpen(false)} />
             <NavLink to="/lost" label="Lost" onClick={() => setIsOpen(false)} />
-            {isAuthenticated && <NavLink to="/chats" label="Chats" onClick={() => setIsOpen(false)} />}
+            {isAuthenticated && (
+              <NavLink to="/chats" label="Chats" onClick={() => setIsOpen(false)} />
+            )}
             {!isAuthenticated ? (
               <>
                 <NavLink to="/login" label="Login" onClick={() => setIsOpen(false)} />
@@ -181,11 +210,19 @@ const ChatPage = ({ currentUserId }) => {
       <div className="flex-none flex items-center p-4 border-b border-gray-700 justify-between">
         <div className="flex items-center">
           {chatHeader.itemImage && (
-            <img src={chatHeader.itemImage} alt={chatHeader.itemTitle} className="w-12 h-12 object-cover rounded" />
+            <img
+              src={chatHeader.itemImage}
+              alt={chatHeader.itemTitle}
+              className="w-12 h-12 object-cover rounded"
+            />
           )}
           <div className="flex flex-col ml-3">
-            {chatHeader.ownerUsername && <span className="text-lg font-bold">{chatHeader.ownerUsername}</span>}
-            <span className="text-xs text-gray-400 font-medium">{chatHeader.itemTitle}</span>
+            {chatHeader.ownerUsername && (
+              <span className="text-lg font-bold">{chatHeader.ownerUsername}</span>
+            )}
+            <span className="text-xs text-gray-400 font-medium">
+              {chatHeader.itemTitle}
+            </span>
           </div>
         </div>
         <button
@@ -199,22 +236,39 @@ const ChatPage = ({ currentUserId }) => {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {loading ? (
-          <p className="text-gray-300 animate-pulse text-center">Loading messages...</p>
+          <p className="text-gray-300 animate-pulse text-center">
+            Loading messages...
+          </p>
         ) : messages.length === 0 ? (
           <p className="text-gray-400 text-center mt-4">No messages yet.</p>
         ) : (
           messages.map((m) => {
             const isMine = m.sender_id === Number(currentUserId);
             return (
-              <div key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+              <div
+                key={m.id}
+                className={`flex items-start gap-2 ${
+                  isMine ? "justify-end" : "justify-start"
+                }`}
+              >
+                {/* ✅ ปุ่มลบอยู่นอกกล่องข้อความด้านซ้าย */}
+                {isMine && (
+                  <button
+                    onClick={() => deleteMessage(m.id)}
+                    className="text-white hover:text-red-600 mt-8"
+                    title="Dekete Message"
+                  >
+                    <MdDeleteOutline size={20} />
+                  </button>
+                )}
+
                 <div
-                  className={`inline-block px-4 py-2 break-words max-w-[70%] text-sm ${
+                  className={`relative inline-block px-4 py-2 break-words max-w-[70%] text-sm ${
                     isMine
-                      ? "bg-blue-600 text-white  rounded-l-lg rounded-tr-lg"
-                      : "bg-white/10 text-white  rounded-r-lg rounded-tl-lg"
+                      ? "bg-blue-600 text-white rounded-l-lg rounded-tr-lg"
+                      : "bg-white/10 text-white rounded-r-lg rounded-tl-lg"
                   }`}
                 >
-                 
                   {m.image && (
                     <img
                       src={m.image}
@@ -223,9 +277,12 @@ const ChatPage = ({ currentUserId }) => {
                     />
                   )}
                   {m.message && <span>{m.message}</span>}
-                  <div className="text-xs  text-white mt-1 text-right">
+                  <div className="text-xs text-white mt-1 text-right">
                     {m.created_at
-                      ? new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      ? new Date(m.created_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
                       : "-"}
                   </div>
                 </div>
@@ -236,71 +293,66 @@ const ChatPage = ({ currentUserId }) => {
         <div ref={bottomRef} />
       </div>
 
-     {/* Input Section */}
-<div className="flex-none flex items-center p-4 border-t border-gray-700 space-x-2 bg-gray-800">
-  {/* Preview รูปภาพก่อนส่ง */}
-  {imageFile && (
-    <div className="relative">
-      <img
-        src={URL.createObjectURL(imageFile)}
-        alt="preview"
-        className="w-20 h-20 object-cover rounded-lg border border-gray-600"
-      />
-      <button
-        onClick={() => setImageFile(null)}
-        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-700"
-      >
-        ×
-      </button>
-    </div>
-  )}
+      {/* Input Section */}
+      <div className="flex-none flex items-center p-4 border-t border-gray-700 space-x-2 bg-gray-800">
+        {imageFile && (
+          <div className="relative">
+            <img
+              src={URL.createObjectURL(imageFile)}
+              alt="preview"
+              className="w-20 h-20 object-cover rounded-lg border border-gray-600"
+            />
+            <button
+              onClick={() => setImageFile(null)}
+              className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-700"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
-  {/* ปุ่มเลือกไฟล์ */}
- <label className="flex items-center justify-center w-12 h-12 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition">
-  <input
-    type="file"
-    accept="image/*,video/*" // ✅ รองรับเฉพาะรูปภาพและวิดีโอ
-    className="hidden"
-    onChange={(e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+        <label className="flex items-center justify-center w-12 h-12 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition">
+          <input
+            type="file"
+            accept="image/*,video/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files[0];
+              if (!file) return;
+              if (
+                !file.type.startsWith("image/") &&
+                !file.type.startsWith("video/")
+              ) {
+                alert("สามารถส่งได้เฉพาะไฟล์รูปภาพและวิดีโอเท่านั้น");
+                e.target.value = null;
+                return;
+              }
+              setImageFile(file);
+            }}
+          />
+          <span className="text-yellow-400 text-2xl">📎</span>
+        </label>
 
-      // ตรวจสอบ type ของไฟล์
-      if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-        alert("สามารถส่งได้เฉพาะไฟล์รูปภาพและวิดีโอเท่านั้น");
-        e.target.value = null; // ล้าง input
-        return;
-      }
+        <input
+          className="flex-grow p-2 rounded-lg bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              sendMessage();
+            }
+          }}
+          placeholder="Type a message..."
+        />
 
-      setImageFile(file);
-    }}
-  />
-  <span className="text-yellow-400 text-2xl">📎</span>
-</label>
-
-  {/* Input ข้อความ */}
-  <input
-    className="flex-grow p-2 rounded-lg bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-    value={input}
-    onChange={(e) => setInput(e.target.value)}
-    onKeyDown={(e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        sendMessage();
-      }
-    }}
-    placeholder="Type a message..."
-  />
-
-  {/* ปุ่มส่ง */}
-  <button
-    onClick={sendMessage}
-    className="px-4 py-2 rounded-lg bg-yellow-500 text-black font-semibold hover:bg-yellow-600 transition"
-  >
-    Send
-  </button>
-</div>
-
+        <button
+          onClick={sendMessage}
+          className="px-4 py-2 rounded-lg bg-yellow-500 text-black font-semibold hover:bg-yellow-600 transition"
+        >
+          Send
+        </button>
+      </div>
 
       {/* Error Popup */}
       {errorMsg && (

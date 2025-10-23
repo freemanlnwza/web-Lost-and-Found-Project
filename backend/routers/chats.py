@@ -103,3 +103,17 @@ async def send_message(
         "created_at": msg.created_at,
         "image": encode_image(msg.image_data, msg.image_content_type) if msg.image_data else None
     }
+
+@router.delete("/messages/{message_id}/delete")
+def delete_message(message_id: int, user_id: int, db: Session = Depends(get_db)):
+    message = db.query(models.Message).filter(models.Message.id == message_id).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="ไม่พบข้อความนี้")
+
+    # ตรวจสอบสิทธิ์
+    if message.sender_id != user_id:
+        raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์ลบข้อความนี้")
+
+    db.delete(message)
+    db.commit()
+    return {"message": "ลบข้อความสำเร็จ"}
