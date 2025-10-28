@@ -13,6 +13,7 @@ const Otp = () => {
   const [loading, setLoading] = useState(false);
   const [popup, setPopup] = useState({ show: false, type: "success", message: "" });
   const [disabled, setDisabled] = useState(false);
+  const [attempts, setAttempts] = useState(0); // ✅ นับจำนวนครั้งที่ลอง OTP
 
   if (!email) {
     return (
@@ -31,6 +32,17 @@ const Otp = () => {
       return;
     }
 
+    if (attempts >= 5) {
+      // ถ้าเกิน 5 ครั้ง ให้ redirect กลับ register
+      setPopup({
+        show: true,
+        type: "error",
+        message: "คุณกรอก OTP เกิน 5 ครั้ง! กรุณาลองใหม่",
+      });
+      setTimeout(() => navigate("/register"), 2500);
+      return;
+    }
+
     setLoading(true);
     setDisabled(true);
 
@@ -43,12 +55,24 @@ const Otp = () => {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        setError(data.detail || "Invalid OTP. Please try again.");
-        setDisabled(false);
-        return;
-      }
+     if (!response.ok) {
+  if (data.detail === "OTP หมดอายุ") {
+    setPopup({
+      show: true,
+      type: "error",
+      message: "OTP หมดอายุ! กรุณาลองลงทะเบียนใหม่",
+    });
+    setTimeout(() => navigate("/register"), 2500);
+    return;
+  }
 
+  setError(data.detail || "Invalid OTP. Please try again.");
+  setDisabled(false);
+  setAttempts(prev => prev + 1);
+  return;
+}
+
+      // ✅ OTP ถูกต้อง
       setPopup({
         show: true,
         type: "success",
@@ -87,6 +111,7 @@ const Otp = () => {
               disabled={disabled}
             />
             {error && <p className="text-red-400 text-sm mt-2 text-center">{error}</p>}
+            <p className="text-gray-400 text-sm mt-1 text-center">Attempts: {attempts} / 5</p> {/* แสดงจำนวนครั้ง */}
           </div>
 
           <button

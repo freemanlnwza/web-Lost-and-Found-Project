@@ -1,22 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, XCircle } from "lucide-react";
 
 // ====================== Popup Component ======================
-const Popup = ({ message, type = "success", onClose, otp, setOtp, onConfirm }) => {
-  const [otpError, setOtpError] = useState("");
-
-  const handleConfirmClick = async () => {
-    if (onConfirm) {
-      const error = await onConfirm(); // onConfirm now returns error message or null
-      if (error) {
-        setOtpError(error); // show inline error
-      } else {
-        setOtpError("");
-      }
-    }
-  };
-
+const Popup = ({ message, type = "success", onClose }) => {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-8 rounded-3xl shadow-2xl w-96 text-center border border-gray-700 transform animate-scale-in">
@@ -36,18 +23,16 @@ const Popup = ({ message, type = "success", onClose, otp, setOtp, onConfirm }) =
         </h3>
         <p className="text-gray-300 mb-6">{message}</p>
 
-        {!onConfirm && (
-          <button
-            onClick={onClose}
-            className={`w-full py-3 rounded-xl font-semibold text-white transition-all transform hover:scale-105 active:scale-95 ${
-              type === "success"
-                ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg shadow-green-500/50"
-                : "bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 shadow-lg shadow-red-500/50"
-            }`}
-          >
-            OK
-          </button>
-        )}
+        <button
+          onClick={onClose}
+          className={`w-full py-3 rounded-xl font-semibold text-white transition-all transform hover:scale-105 active:scale-95 ${
+            type === "success"
+              ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg shadow-green-500/50"
+              : "bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 shadow-lg shadow-red-500/50"
+          }`}
+        >
+          OK
+        </button>
       </div>
     </div>
   );
@@ -59,14 +44,28 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [strongPassword, setStrongPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("success");
   const [showPopup, setShowPopup] = useState(false);
-  const [strongPassword, setStrongPassword] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  // ====================== ฟังก์ชันเคลียร์ฟอร์ม ======================
+  const resetForm = () => {
+    setUsername("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setStrongPassword("");
+  };
+
+  // เคลียร์ฟอร์มอัตโนมัติเมื่อโหลดหน้า
+  useEffect(() => {
+    resetForm();
+  }, []);
 
   const showMessage = (msg, type = "success") => {
     setPopupMessage(msg);
@@ -74,9 +73,7 @@ const Register = () => {
     setShowPopup(true);
   };
 
-  const handlePopupClose = () => {
-    setShowPopup(false);
-  };
+  const handlePopupClose = () => setShowPopup(false);
 
   const fetchStrongPassword = async () => {
     try {
@@ -89,47 +86,49 @@ const Register = () => {
     }
   };
 
- const handleSendOtp = async (e) => {
-  e.preventDefault();
-  if (!email) {
-    setPopupMessage("Please enter your email.");
-    setPopupType("error");
-    setShowPopup(true);
-    return;
-  }
+  const handleSendOtp = async (e) => {
+    e.preventDefault();
 
-  setLoading(true);
-  try {
-    // เรียก API /register เพื่อสร้าง OTP และ TempUser
-    const response = await fetch("http://127.0.0.1:8000/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, email, password }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      setPopupMessage(data.detail || "Failed to send OTP.");
-      setPopupType("error");
-      setShowPopup(true);
-      return;
+    if (!email.match(/@(gmail\.com|hotmail\.com|outlook\.com|yahoo\.com)$/)) {
+      return showMessage("Email must be Gmail / Outlook / Yahoo / Hotmail", "error");
     }
 
-    // ✅ ส่ง OTP สำเร็จ → navigate ไปหน้า OTP พร้อมส่งข้อมูลฟอร์มไป
-    navigate("/otp", {
-      state: { username, email, password },
-    });
-  } catch (error) {
-    console.error(error);
-    setPopupMessage("Connection error. Please try again.");
-    setPopupType("error");
-    setShowPopup(true);
-  } finally {
-    setLoading(false);
-  }
-};
+    const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+    if (!strongRegex.test(password)) {
+      return showMessage("Password is not strong enough.", "error");
+    }
 
+    if (password !== confirmPassword) {
+      return showMessage("Passwords do not match.", "error");
+    }
+
+    if (loading) return; // ✅ ป้องกัน double submit
+
+    setLoading(true);
+    try {
+      const response = await fetch("http://127.0.0.1:8000/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showMessage(data.detail || "Failed to send OTP.", "error");
+        return;
+      }
+
+      resetForm(); // ✅ เคลียร์ฟอร์มหลังส่ง OTP สำเร็จ
+
+      navigate("/otp", { state: { username, email } });
+    } catch (error) {
+      console.error(error);
+      showMessage("Connection error. Please try again.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="flex items-center justify-center h-full pt-14 px-4 sm:px-6 lg:px-8 bg-gray-900">
@@ -141,39 +140,79 @@ const Register = () => {
         <form onSubmit={handleSendOtp} className="space-y-4 sm:space-y-5">
           <div>
             <label htmlFor="username" className="block text-sm mb-1 text-gray-300">Username</label>
-            <input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none" placeholder="Username" required />
+            <input
+              type="text"
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
+              placeholder="Username"
+              required
+            />
           </div>
 
           <div>
             <label htmlFor="email" className="block text-sm mb-1 text-gray-300">Email</label>
-            <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none" placeholder="you@example.com" required />
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
+              placeholder="you@example.com"
+              required
+            />
           </div>
 
           <div>
             <label htmlFor="password" className="block text-sm mb-1 text-gray-300">Password</label>
-            <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none" placeholder="••••••••" required />
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
+              placeholder="••••••••"
+              required
+            />
             {strongPassword && <p className="text-sm text-green-400 mt-1">Suggested strong password: {strongPassword}</p>}
-            <button type="button" onClick={fetchStrongPassword} className="mt-1 text-sm font-semibold text-blue-400 hover:underline">Generate Strong Password</button>
+            <button
+              type="button"
+              onClick={fetchStrongPassword}
+              className="mt-1 text-sm font-semibold text-blue-400 hover:underline"
+            >
+              Generate Strong Password
+            </button>
           </div>
 
           <div>
             <label htmlFor="confirmPassword" className="block text-sm mb-1 text-gray-300">Confirm Password</label>
-            <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none" placeholder="••••••••" required />
+            <input
+              type="password"
+              id="confirmPassword"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
+              placeholder="••••••••"
+              required
+            />
           </div>
 
-          <button type="submit" disabled={loading} className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-lg font-semibold text-white 
+                       bg-gradient-to-r from-indigo-500 to-blue-600 
+                       hover:from-indigo-600 hover:to-blue-700 
+                       transition-all 
+                       disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+          >
             {loading ? "Sending OTP..." : "Send OTP"}
           </button>
         </form>
       </div>
 
-      {showPopup && (
-        <Popup
-          message={popupMessage}
-          type={popupType}
-          onClose={handlePopupClose}
-        />
-      )}
+      {showPopup && <Popup message={popupMessage} type={popupType} onClose={handlePopupClose} />}
     </main>
   );
 };
