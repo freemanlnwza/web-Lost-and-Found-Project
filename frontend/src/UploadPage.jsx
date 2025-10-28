@@ -8,11 +8,15 @@ const Popup = ({ type = "success", message, onClose, uploadedItem }) => {
     <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl shadow-2xl max-w-2xl w-full mx-4 border border-gray-700 transform animate-scale-in overflow-hidden">
         {/* Header */}
-        <div className={`p-6 ${
-          type === "success" ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20" :
-          type === "error" ? "bg-gradient-to-r from-red-500/20 to-rose-500/20" :
-          "bg-gradient-to-r from-yellow-500/20 to-orange-500/20"
-        }`}>
+        <div
+          className={`p-6 ${
+            type === "success"
+              ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20"
+              : type === "error"
+              ? "bg-gradient-to-r from-red-500/20 to-rose-500/20"
+              : "bg-gradient-to-r from-yellow-500/20 to-orange-500/20"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {type === "success" ? (
@@ -28,18 +32,19 @@ const Popup = ({ type = "success", message, onClose, uploadedItem }) => {
                   <AlertCircle className="text-yellow-400" size={28} />
                 </div>
               )}
-              <h2 className={`text-2xl font-bold ${
-                type === "success" ? "text-green-400" :
-                type === "error" ? "text-red-400" :
-                "text-yellow-400"
-              }`}>
+              <h2
+                className={`text-2xl font-bold ${
+                  type === "success"
+                    ? "text-green-400"
+                    : type === "error"
+                    ? "text-red-400"
+                    : "text-yellow-400"
+                }`}
+              >
                 {type === "success" ? "Success!" : type === "error" ? "Error" : "Notice"}
               </h2>
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
-            >
+            <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
               <XCircle size={24} />
             </button>
           </div>
@@ -49,69 +54,69 @@ const Popup = ({ type = "success", message, onClose, uploadedItem }) => {
         <div className="p-6">
           {uploadedItem ? (
             <div className="space-y-4">
-              {Array.isArray(uploadedItem) ? (
-                uploadedItem.map((item, idx) => (
-                  <div key={idx} className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-                    <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                      <div>
-                        <p className="text-gray-400">Title</p>
-                        <p className="text-white font-semibold">{item.title}</p>
+              {Array.isArray(uploadedItem)
+                ? uploadedItem.map((item, idx) => (
+                    <div key={idx} className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                      <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                        <div>
+                          <p className="text-gray-400">Title</p>
+                          <p className="text-white font-semibold">{item.title}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-400">Type</p>
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                              item.type === "lost" ? "bg-red-500/20 text-red-400" : "bg-green-500/20 text-green-400"
+                            }`}
+                          >
+                            {item.type}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-gray-400">Category</p>
+                          <p className="text-white font-semibold">{item.category}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-gray-400">Type</p>
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                          item.type === "lost" 
-                            ? "bg-red-500/20 text-red-400" 
-                            : "bg-green-500/20 text-green-400"
-                        }`}>
-                          {item.type}
-                        </span>
+                      {item.boxed_image_data && (
+                        <img
+                          src={item.boxed_image_data}
+                          alt="Detected result"
+                          className="w-full rounded-lg object-contain bg-gray-900"
+                        />
+                      )}
+                    </div>
+                  ))
+                : uploadedItem && (
+                    <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                      <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                        <div>
+                          <p className="text-gray-400">Title</p>
+                          <p className="text-white font-semibold">{uploadedItem.title}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-400">Type</p>
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                              uploadedItem.type === "lost" ? "bg-red-500/20 text-red-400" : "bg-green-500/20 text-green-400"
+                            }`}
+                          >
+                            {uploadedItem.type}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-gray-400">Category</p>
+                          <p className="text-white font-semibold">{uploadedItem.category}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-gray-400">Category</p>
-                        <p className="text-white font-semibold">{item.category}</p>
-                      </div>
+                      {uploadedItem.boxed_image_data && (
+                        <img
+                          src={uploadedItem.boxed_image_data}
+                          alt="Detected result"
+                          className="w-full rounded-lg object-contain bg-gray-900"
+                        />
+                      )}
                     </div>
-                    {item.boxed_image_data && (
-                      <img
-                        src={item.boxed_image_data}
-                        alt="Detected result"
-                        className="w-full rounded-lg object-contain bg-gray-900"
-                      />
-                    )}
-                  </div>
-                ))
-              ) : (
-                <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-                  <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                    <div>
-                      <p className="text-gray-400">Title</p>
-                      <p className="text-white font-semibold">{uploadedItem.title}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400">Type</p>
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        uploadedItem.type === "lost" 
-                          ? "bg-red-500/20 text-red-400" 
-                          : "bg-green-500/20 text-green-400"
-                      }`}>
-                        {uploadedItem.type}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-gray-400">Category</p>
-                      <p className="text-white font-semibold">{uploadedItem.category}</p>
-                    </div>
-                  </div>
-                  {uploadedItem.boxed_image_data && (
-                    <img
-                      src={uploadedItem.boxed_image_data}
-                      alt="Detected result"
-                      className="w-full rounded-lg object-contain bg-gray-900"
-                    />
                   )}
-                </div>
-              )}
             </div>
           ) : (
             <p className="text-gray-300 text-center">{message}</p>
@@ -200,8 +205,7 @@ const UploadPage = () => {
 
   // ===================== Handle Image Upload =====================
   const handleImageUpload = (fileOrDataURL) => {
-    if (!requireLogin()) return;
-    if (!fileOrDataURL) return;
+    if (!requireLogin() || !fileOrDataURL) return;
 
     if (typeof fileOrDataURL === "string" && fileOrDataURL.startsWith("data:")) {
       fetch(fileOrDataURL)
@@ -291,6 +295,7 @@ const UploadPage = () => {
       const res = await fetch("http://localhost:8000/api/upload", {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
 
       if (!res.ok) {
@@ -304,7 +309,6 @@ const UploadPage = () => {
       setUploadedItem(data);
       setPopupType("success");
       setShowPopup(true);
-      resetForm();
     } catch (error) {
       setPopupMessage("Image can't upload, please try new Image.");
       setPopupType("error");
@@ -318,7 +322,6 @@ const UploadPage = () => {
 
     try {
       let imageFile = uploadedImage;
-
       if (!imageFile && preview) {
         const res = await fetch(preview);
         const blob = await res.blob();
@@ -339,6 +342,7 @@ const UploadPage = () => {
       const res = await fetch("http://localhost:8000/api/search", {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
 
       if (!res.ok) throw new Error("Search failed");
@@ -356,8 +360,6 @@ const UploadPage = () => {
   return (
     <main className="flex items-center justify-center h-full pt-16">
       <div className="w-full max-w-xl bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl p-6 space-y-4 text-white border-2 border-yellow-500 mx-auto">
-
-
         <h1 className="text-2xl sm:text-3xl font-bold text-center">Upload Image & Message</h1>
 
         {!isAuthenticated && (
@@ -476,7 +478,10 @@ const UploadPage = () => {
           <Popup
             type={popupType}
             uploadedItem={uploadedItem}
-            onClose={() => setShowPopup(false)}
+            onClose={() => {
+              setShowPopup(false);
+              resetForm();
+            }}
           />
         )}
 

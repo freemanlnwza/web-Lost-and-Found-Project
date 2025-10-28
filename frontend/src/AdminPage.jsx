@@ -42,57 +42,49 @@ const AdminPage = () => {
     );
   }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem("token") || currentUser?.id;
-
-        if (activeTab === "users") {
-          const res = await fetch("http://localhost:8000/admin/users", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!res.ok) throw new Error("Failed to fetch users");
-          setUsers(await res.json());
-        } else if (activeTab === "items") {
-          const res = await fetch("http://localhost:8000/admin/items", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!res.ok) throw new Error("Failed to fetch items");
-          setItems(await res.json());
-        } else if (activeTab === "messages") {
-          const res = await fetch("http://localhost:8000/admin/messages", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!res.ok) throw new Error("Failed to fetch messages");
-          setMessages(await res.json());
-        } else if (activeTab === "logs") {
-          const res = await fetch("http://localhost:8000/admin/logs", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!res.ok) throw new Error("Failed to fetch logs");
-          setLogs(await res.json());
-        }
-      } catch (err) {
-        console.error(err);
-        setErrorMsg(err.message || "เกิดข้อผิดพลาด");
-      } finally {
-        setLoading(false);
-        contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+ useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      let res;
+      if (activeTab === "users") {
+        res = await fetch("http://localhost:8000/admin/users", {
+          credentials: "include", // ✅ สำคัญมาก
+        });
+        if (!res.ok) throw new Error("Failed to fetch users");
+        setUsers(await res.json());
+      } else if (activeTab === "items") {
+        res = await fetch("http://localhost:8000/admin/items", {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to fetch items");
+        setItems(await res.json());
+      } else if (activeTab === "logs") {
+        res = await fetch("http://localhost:8000/admin/logs", {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to fetch logs");
+        setLogs(await res.json());
       }
-    };
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message);
+    } finally {
+      setLoading(false);
+      contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+  fetchData();
+}, [activeTab]);
 
-    fetchData();
-  }, [activeTab, currentUser]);
 
   const handleLogout = async () => {
     if (!currentUser) return;
 
     try {
-      const res = await fetch("http://localhost:8000/auth/logout", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ username: currentUser.username }),
+      await fetch("http://localhost:8000/auth/logout", {
+      method: "POST",
+      credentials: "include", // ✅ ส่ง cookie ไปด้วย
       });
 
       if (!res.ok) {
@@ -110,65 +102,49 @@ const AdminPage = () => {
     }
   };
 
-  const handleMakeAdmin = async (userId) => {
-    if (!confirm("Are you sure you want to make this user an admin?")) return;
-    try {
-      const token = localStorage.getItem("token") || currentUser?.id;
-      const res = await fetch(`http://localhost:8000/admin/users/${userId}/make-admin`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setUsers(users.map(u => u.id === userId ? { ...u, role: "admin" } : u));
-    } catch (err) {
-      console.error(err);
-      alert("Failed to promote user");
-    }
-  };
+const handleMakeAdmin = async (userId) => {
+  if (!confirm("Make this user admin?")) return;
+  const res = await fetch(`http://localhost:8000/admin/users/${userId}/make-admin`, {
+    method: "PATCH",
+    credentials: "include", // ✅ ส่ง cookie ไปด้วย
+  });
+  if (res.ok) {
+    setUsers(users.map(u => (u.id === userId ? { ...u, role: "admin" } : u)));
+  }
+};
 
-  const handleRemoveAdmin = async (userId) => {
-    if (!confirm("Are you sure you want to remove admin role from this user?")) return;
-    try {
-      const token = localStorage.getItem("token") || currentUser?.id;
-      const res = await fetch(`http://localhost:8000/admin/users/${userId}/remove-admin`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setUsers(users.map(u => u.id === userId ? { ...u, role: "user" } : u));
-    } catch (err) {
-      console.error(err);
-      alert("Failed to remove admin role");
-    }
-  };
+const handleRemoveAdmin = async (userId) => {
+  if (!confirm("Remove admin role?")) return;
+  const res = await fetch(`http://localhost:8000/admin/users/${userId}/remove-admin`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  if (res.ok) {
+    setUsers(users.map(u => (u.id === userId ? { ...u, role: "user" } : u)));
+  }
+};
 
-  const handleDeleteUser = async (userId) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-    try {
-      const token = localStorage.getItem("token") || currentUser?.id;
-      const res = await fetch(`http://localhost:8000/admin/users/${userId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setUsers(users.filter(u => u.id !== userId));
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete user");
-    }
-  };
+const handleDeleteUser = async (userId) => {
+  if (!confirm("Delete this user?")) return;
+  const res = await fetch(`http://localhost:8000/admin/users/${userId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (res.ok) {
+    setUsers(users.filter(u => u.id !== userId));
+  }
+};
 
-  const handleDeleteItem = async (itemId) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
-    try {
-      const token = localStorage.getItem("token") || currentUser?.id;
-      const res = await fetch(`http://localhost:8000/admin/items/${itemId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setItems(items.filter(i => i.id !== itemId));
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete item");
-    }
-  };
+const handleDeleteItem = async (itemId) => {
+  if (!confirm("Delete this item?")) return;
+  const res = await fetch(`http://localhost:8000/admin/items/${itemId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (res.ok) {
+    setItems(items.filter(i => i.id !== itemId));
+  }
+};
 
 
 
@@ -178,7 +154,8 @@ useEffect(() => {
   const fetchLogCount = async () => {
     const token = localStorage.getItem("token") || currentUser?.id;
     const res = await fetch("http://localhost:8000/admin/logs/count", {
-      headers: { Authorization: `Bearer ${token}` },
+    method: "GET",
+    credentials: "include", // ✅ สำคัญ ต้อง include cookie
     });
     if (res.ok) {
       const data = await res.json();
@@ -343,7 +320,7 @@ const stats = [
                     </span>
                   </td>
                   <td className="text-black font-medium py-4 px-4">{i.user_id}</td>
-                  <td className="py-4 px-4 flex flex-wrap gap-2">
+                  <td className="py-10 px-4 flex flex-wrap gap-2">
                     <button onClick={() => handleDeleteItem(i.id)} className="text-red-400"><Trash2 size={18} /></button>
                   </td>
                 </tr>
