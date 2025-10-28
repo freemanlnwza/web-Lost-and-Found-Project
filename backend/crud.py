@@ -1,24 +1,21 @@
 import base64
 from sqlalchemy.orm import Session, joinedload
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import utils
 import models
 from models import User, Item, Chat, Message
 import schemas
 import bcrypt
 import io
-from fastapi import Depends, HTTPException, UploadFile
+from fastapi import Depends, HTTPException, Request, UploadFile, Cookie
 from typing import Optional, List
 from utils import get_text_embedding, get_image_embedding
 from datetime import datetime
 from database import get_db
 
-# สร้าง security scheme สำหรับ token-based authentication
-security = HTTPBearer()
-
 # ===========================
 # ฟังก์ชันจัดการ User
 # ===========================
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 def create_user(db: Session, user: schemas.UserCreate) -> User:
     hashed_pw = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode()
@@ -35,17 +32,18 @@ def get_user_by_username(db: Session, username: str) -> Optional[User]:
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
     user = get_user_by_username(db, username)
-    if not user:
-        return None
-    if not bcrypt.checkpw(password.encode(), user.password.encode()):
+    if not user or not bcrypt.checkpw(password.encode(), user.password.encode()):
         return None
     return user
 
-def encode_file(file_data, file_content_type):
-    if not file_data:
-        return None
-    base64_data = base64.b64encode(file_data).decode("utf-8")
-    return f"data:{file_content_type};base64,{base64_data}"
+
+def get_user_by_session_token(db: Session, session_token: str) -> Optional[User]:
+    session = db.query(models.Session).filter(models.Session.session_token == session_token).first()
+    if session:
+        return db.query(User).filter(User.id == session.user_id).first()
+    return None
+
+
 # ===========================
 # ฟังก์ชันจัดการ Item
 # ===========================
@@ -59,32 +57,25 @@ def create_item(
     user_id: int,
     boxed_image_data: Optional[bytes] = None,
     image_emb: Optional[list] = None,
-    original_image_data: Optional[bytes] = None,  # ✅ เพิ่มค่าเริ่มต้น
-) -> models.Item:
-    """
-    ✅ ฟังก์ชันนี้จะสร้าง Item ใหม่และเก็บภาพ 3 แบบ:
-        1. cropped image (image_data)
-        2. boxed image (boxed_image_data)
-        3. original image (original_image_data)
-    """
-    text_emb = utils.get_text_embedding(item.title).tolist()
+    original_image_data: Optional[bytes] = None,
+) -> Item:
+    text_emb = get_text_embedding(item.title).tolist()
     if image_emb is None:
-        image_emb = utils.get_image_embedding(image_bytes).tolist()
+        image_emb = get_image_embedding(image_bytes).tolist()
 
-    db_item = models.Item(
+    db_item = Item(
         title=item.title,
         type=item.type,
         category=item.category,
-        image_data=image_bytes,  # 🟢 ครอบแล้ว
-        boxed_image_data=boxed_image_data,  # 🟢 ใส่กรอบแดง
-        original_image_data=original_image_data,  # 🟢 ต้นฉบับเต็ม
+        image_data=image_bytes,
+        boxed_image_data=boxed_image_data,
+        original_image_data=original_image_data,
         image_filename=image_filename,
         image_content_type=image_content_type,
         user_id=user_id,
         text_embedding=text_emb,
         image_embedding=image_emb,
     )
-
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
@@ -147,14 +138,15 @@ def get_chats_for_user(db: Session, user_id: int) -> List[Chat]:
 # ฟังก์ชันจัดการ Message
 # ===========================
 
-def create_message(db: Session, msg_in: schemas.MessageCreate):
-    msg = models.Message(
-        chat_id=msg_in.chat_id,
-        sender_id=msg_in.sender_id,
-        message=msg_in.message,
-        image_data=msg_in.image_data,
-        image_content_type=msg_in.image_content_type,
-        image_filename=msg_in.image_filename
+def create_message(db: Session, chat_id: int, sender_id: int, message: str, image_data: Optional[bytes] = None,
+                   image_content_type: Optional[str] = None, image_filename: Optional[str] = None):
+    msg = Message(
+        chat_id=chat_id,
+        sender_id=sender_id,
+        message=message,
+        image_data=image_data,
+        image_content_type=image_content_type,
+        image_filename=image_filename
     )
     db.add(msg)
     db.commit()
@@ -162,15 +154,8 @@ def create_message(db: Session, msg_in: schemas.MessageCreate):
     return msg
 
 
-
 def get_messages_by_chat(db: Session, chat_id: int) -> List[Message]:
-    messages = (
-        db.query(Message)
-        .filter(Message.chat_id == chat_id)
-        .order_by(Message.created_at.asc())
-        .all()
-    )
-    return messages
+    return db.query(Message).filter(Message.chat_id == chat_id).order_by(Message.created_at.asc()).all()
 
 
 # ===========================
@@ -185,10 +170,7 @@ def is_user_in_chat(db: Session, chat_id: int, user_id: int) -> bool:
 
 
 def get_user_chats(db: Session, user_id: int):
-    chats = db.query(models.Chat).filter(
-        (models.Chat.user1_id == user_id) | (models.Chat.user2_id == user_id)
-    ).all()
-
+    chats = db.query(Chat).filter((Chat.user1_id == user_id) | (Chat.user2_id == user_id)).all()
     result = []
     for chat in chats:
         result.append({
@@ -209,28 +191,13 @@ def encode_image(data, content_type):
     return None
 
 
-def get_admin_user(credentials: Optional[HTTPAuthorizationCredentials], db: Session):
-    if not credentials:
-        raise HTTPException(status_code=401, detail="ต้องมี Authorization")
-    try:
-        user_id = int(credentials.credentials)
-        user = db.query(models.User).filter(models.User.id == user_id).first()
-        if not user:
-            raise HTTPException(status_code=401, detail="ไม่พบผู้ใช้")
-        if not hasattr(user, 'role') or user.role != "admin":
-            raise HTTPException(status_code=403, detail="ต้องเป็น admin")
-        return user
-    except ValueError:
-        raise HTTPException(status_code=401, detail="Token ไม่ถูกต้อง")
-
-
 def log_admin_action(db: Session, admin_id: int, admin_username: str, action: str, action_type: str = None):
     try:
         log = models.AdminLog(
             admin_id=admin_id,
             admin_username=admin_username,
             action=action,
-            action_type=action_type,  # ✅ เพิ่ม
+            action_type=action_type,
             timestamp=datetime.now(),
         )
         db.add(log)
@@ -239,15 +206,36 @@ def log_admin_action(db: Session, admin_id: int, admin_username: str, action: st
         print(f"บันทึกการกระทำของ admin ล้มเหลว: {e}")
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
-) -> User:
-    try:
-        user_id = int(credentials.credentials)
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            raise HTTPException(status_code=401, detail="ไม่พบผู้ใช้")
-        return user
-    except ValueError:
-        raise HTTPException(status_code=401, detail="Token ไม่ถูกต้อง")
+# ===========================
+# ดึง user จาก session cookie
+# ===========================
+def get_current_user(session_token: Optional[str] = Cookie(None), db: Session = Depends(get_db)) -> User:
+    if not session_token:
+        raise HTTPException(status_code=401, detail="ต้อง login ก่อน")
+    user = get_user_by_session_token(db, session_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Session ไม่ถูกต้อง")
+    return user
+
+
+def get_current_admin(request: Request, db: Session = Depends(get_db)):
+    # ดึง session token จาก cookie
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="ไม่พบ cookie session")
+    
+    # หา session ในฐานข้อมูล
+    session = db.query(models.Session).filter(models.Session.session_token == token).first()
+    if not session:
+        raise HTTPException(status_code=401, detail="Session ไม่ถูกต้องหรือหมดอายุ")
+
+    # หา user จาก session
+    user = db.query(models.User).filter(models.User.id == session.user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User ไม่ถูกต้อง")
+    
+    # ตรวจสอบว่า user เป็น admin
+    if getattr(user, "role", "") != "admin":
+        raise HTTPException(status_code=403, detail="ต้องเป็น admin")
+    
+    return user

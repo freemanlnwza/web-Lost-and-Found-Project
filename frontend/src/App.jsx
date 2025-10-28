@@ -18,7 +18,7 @@ import SearchPage from "./SearchPage.jsx";
 import GuideBook from "./GuideBook.jsx";
 import AdminPage from "./AdminPage.jsx";
 import ListChat from "./ListChat.jsx";
-
+import Otp from "./Otp.jsx";
 
 // ✅ Wrapper สำหรับ Router
 function AppWrapper() {
@@ -193,6 +193,10 @@ function App() {
                 path="/chats"
                 element={<ListChat currentUserId={currentUser?.id} />}
               />
+               <Route
+                path="/otp"
+                element={<Otp />} 
+              />
               
             </Routes>
           </div>
@@ -235,13 +239,26 @@ const NavLink = ({ to, label, onClick }) => (
 // Logout button component
 const LogoutButton = ({ setIsAuthenticated, setCurrentUser }) => {
   const navigate = useNavigate();
-  const handleLogout = () => {
+
+  const handleLogout = async () => {
+    try {
+      // เรียก API logout ที่ backend
+      await fetch("http://localhost:8000/auth/logout", {
+        method: "POST",
+        credentials: "include", // สำคัญ! เพื่อส่ง cookie ไปให้ backend ลบ
+      });
+    } catch (error) {
+      console.error("Logout API error:", error);
+    }
+
+    // ล้างข้อมูลฝั่ง client
     localStorage.clear();
     sessionStorage.clear();
     setIsAuthenticated(false);
     setCurrentUser(null);
     navigate("/login", { replace: true });
   };
+
   return (
     <button
       onClick={handleLogout}

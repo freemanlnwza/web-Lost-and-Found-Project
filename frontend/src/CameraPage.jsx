@@ -48,12 +48,18 @@ const CameraPage = () => {
             const res = await fetch("http://localhost:8000/detect/frame", {
               method: "POST",
               body: formData,
+              credentials: "include",
             });
 
-            if (!res.ok) {
-              console.error("Server error:", res.status);
-              return;
-            }
+          if (res.status === 401) {
+            alert("You must be logged in to use detection.");
+            return;
+          }
+
+          if (!res.ok) {
+            console.error("Server error:", res.status);
+            return;
+          }
 
             const data = await res.json();
 
