@@ -49,9 +49,9 @@ class EmailOTP(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, nullable=False)
-    otp = Column(String, nullable=False)
-    expires_at = Column(DateTime, default=datetime.utcnow)
-
+    otp_hash = Column(String, nullable=False)   # เพิ่มคอลัมน์นี้
+    expires_at = Column(DateTime, nullable=False)
+    attempts = Column(Integer, default=0)
 # ======================
 # Item Model
 # ======================
