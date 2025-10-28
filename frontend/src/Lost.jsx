@@ -8,48 +8,66 @@ const Lost = ({ currentUserId }) => {
   const [showActualImage, setShowActualImage] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchLostItems = async () => {
-      setLoading(true);
-      setItems([]);
-      try {
-        const res = await fetch("http://localhost:8000/api/lost-items");
-        const data = await res.json();
-        if (!isMounted) return;
-        const filteredItems = data.filter((item) => item.user_id !== currentUserId);
-        setItems(filteredItems);
-      } catch (error) {
-        console.error("Error fetching lost items:", error);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-    fetchLostItems();
-    return () => { isMounted = false; };
-  }, [currentUserId]);
+ useEffect(() => {
+  let isMounted = true;
 
-  const handleChat = async (otherUserId, itemId, ownerUsername, itemImage, itemTitle) => {
+  const fetchLostItems = async () => {
+    setLoading(true);
+    setItems([]);
+
     try {
-      const res = await fetch("http://localhost:8000/api/chats/get-or-create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user1_id: currentUserId,
-          user2_id: otherUserId,
-          item_id: itemId,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to start chat");
-      const chat = await res.json();
-      navigate(`/chat/${chat.chat_id}`, {
-        state: { currentUserId, otherUserId, itemImage, itemTitle, ownerUsername },
-      });
+      const res = await fetch("http://localhost:8000/api/lost-items"); // ไม่ต้องใช้ credentials
+      if (!res.ok) throw new Error("Failed to fetch lost items");
+
+      const data = await res.json(); // ✅ ต้องแปลงเป็น json
+
+      if (!isMounted) return;
+
+      // filter เฉพาะถ้ามี currentUserId
+      const filteredItems = currentUserId
+        ? data.filter((item) => item.user_id !== currentUserId)
+        : data;
+
+      setItems(filteredItems);
     } catch (error) {
-      console.error("Error starting chat:", error);
-      alert("Cannot start chat right now.");
+      console.error("Error fetching lost items:", error);
+    } finally {
+      if (isMounted) setLoading(false);
     }
   };
+
+  fetchLostItems();
+
+  return () => {
+    isMounted = false;
+  };
+}, [currentUserId]);
+
+
+  const handleChat = async (otherUserId, itemId, ownerUsername, itemImage, itemTitle) => {
+  try {
+    const res = await fetch("http://localhost:8000/api/chats/get-or-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", // ✅ ส่ง HttpOnly cookie
+      body: JSON.stringify({
+        user2_id: otherUserId,
+        item_id: itemId,
+      }),
+    });
+
+    if (!res.ok) throw new Error("Failed to start chat");
+
+    const chat = await res.json();
+    navigate(`/chat/${chat.chat_id}`, {
+      state: { otherUserId, itemImage, itemTitle, ownerUsername },
+    });
+  } catch (error) {
+    console.error("Error starting chat:", error);
+    alert("Cannot start chat right now.");
+  }
+};
+
 
   if (loading) {
     return (

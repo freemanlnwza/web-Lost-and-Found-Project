@@ -1,0 +1,128 @@
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { CheckCircle, XCircle } from "lucide-react";
+
+const Otp = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const { username, email } = location.state || {};
+
+  const [otp, setOtp] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [popup, setPopup] = useState({ show: false, type: "success", message: "" });
+  const [disabled, setDisabled] = useState(false);
+
+  if (!email) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+        <p className="text-red-400 text-lg">⚠️ Invalid access. Please register first.</p>
+      </div>
+    );
+  }
+
+  const handleConfirmOtp = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (!/^\d{6}$/.test(otp)) {
+      setError("OTP ต้องเป็นตัวเลข 6 หลัก");
+      return;
+    }
+
+    setLoading(true);
+    setDisabled(true);
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.detail || "Invalid OTP. Please try again.");
+        setDisabled(false);
+        return;
+      }
+
+      setPopup({
+        show: true,
+        type: "success",
+        message: "Registration successful! Redirecting to login...",
+      });
+
+      setTimeout(() => navigate("/login"), 2500);
+    } catch (err) {
+      console.error(err);
+      setError("Connection error. Please try again.");
+      setDisabled(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="flex items-center justify-center min-h-screen bg-gray-900 px-4">
+      <div className="w-full max-w-md bg-gray-800 p-8 rounded-2xl shadow-2xl border border-yellow-500 text-white space-y-6">
+        <h1 className="text-2xl font-bold text-center mb-4">Email Verification</h1>
+        <p className="text-center text-gray-300">
+          We've sent a 6-digit OTP to <span className="text-yellow-400">{email}</span>
+        </p>
+
+        <form onSubmit={handleConfirmOtp} className="space-y-4">
+          <div>
+            <label htmlFor="otp" className="block text-sm mb-1 text-gray-300">Enter OTP</label>
+            <input
+              type="text"
+              id="otp"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-yellow-500 focus:outline-none text-center tracking-widest text-lg"
+              placeholder="••••••"
+              maxLength={6}
+              disabled={disabled}
+            />
+            {error && <p className="text-red-400 text-sm mt-2 text-center">{error}</p>}
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || disabled}
+            className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? "Verifying..." : "Verify OTP"}
+          </button>
+        </form>
+      </div>
+
+      {/* Popup Success / Error */}
+      {popup.show && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-8 rounded-3xl shadow-2xl w-96 text-center border border-gray-700 transform animate-scale-in">
+            <div className="mb-4 flex justify-center">
+              {popup.type === "success" ? (
+                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center animate-bounce-in">
+                  <CheckCircle className="text-green-400" size={48} />
+                </div>
+              ) : (
+                <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center animate-bounce-in">
+                  <XCircle className="text-red-400" size={48} />
+                </div>
+              )}
+            </div>
+            <h3 className={`text-xl font-bold mb-2 ${popup.type === "success" ? "text-green-400" : "text-red-400"}`}>
+              {popup.type === "success" ? "Success!" : "Error"}
+            </h3>
+            <p className="text-gray-300 mb-6">{popup.message}</p>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+};
+
+export default Otp;

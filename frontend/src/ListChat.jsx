@@ -1,23 +1,26 @@
 import { useEffect, useState } from "react";
 import { MessageCircle, Image as ImageIcon } from "lucide-react";
-import { MdDeleteOutline } from "react-icons/md"; // ✅ เพิ่มไอคอนลบ
+import { MdDeleteOutline } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 
-const ListChat = ({ currentUserId }) => {
+const ListChat = () => {
   const [chats, setChats] = useState([]);
   const [userItems, setUserItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // ✅ โหลดรายการแชท
-  useEffect(() => {
-    if (!currentUserId) return;
+  // ดึง currentUserId จาก localStorage
+  const currentUserId = JSON.parse(localStorage.getItem("user"))?.id;
 
+  // โหลดรายการแชทของผู้ใช้งาน
+  useEffect(() => {
     let isMounted = true;
 
     const fetchChats = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/chats/${currentUserId}`);
+        const res = await fetch("http://localhost:8000/api/chats/me", {
+          credentials: "include",
+        });
         if (!res.ok) throw new Error("Unable to retrieve chat data");
         const data = await res.json();
         if (isMounted) setChats(data);
@@ -30,15 +33,15 @@ const ListChat = ({ currentUserId }) => {
 
     fetchChats();
     return () => (isMounted = false);
-  }, [currentUserId]);
+  }, []);
 
-  // ✅ โหลดโพสต์ของ user
+  // โหลดโพสต์ของผู้ใช้งาน
   useEffect(() => {
-    if (!currentUserId) return;
-
     const fetchUserItems = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/items/user/${currentUserId}`);
+        const res = await fetch("http://localhost:8000/api/items/user", {
+          credentials: "include",
+        });
         if (!res.ok) throw new Error("Unable to retrieve user items");
         const data = await res.json();
         setUserItems(data);
@@ -48,7 +51,7 @@ const ListChat = ({ currentUserId }) => {
     };
 
     fetchUserItems();
-  }, [currentUserId]);
+  }, []);
 
   if (loading)
     return (
@@ -57,19 +60,37 @@ const ListChat = ({ currentUserId }) => {
       </div>
     );
 
+  // ฟังก์ชันดึง partner ของแชท (ไม่ใช่ตัวเอง)
   const getChatPartner = (chat) => {
-    if (chat.user1_id === currentUserId) {
-      return { id: chat.user2_id, username: chat.user2_username };
+    if (!currentUserId) return { id: chat.user2_id, username: chat.user2_username };
+    return chat.user1_id === currentUserId
+      ? { id: chat.user2_id, username: chat.user2_username }
+      : { id: chat.user1_id, username: chat.user1_username };
+  };
+
+  // เริ่มแชทกับผู้ใช้
+  const handleStartChat = async (user2_id, item_id) => {
+    try {
+      const res = await fetch("http://localhost:8000/api/chats/get-or-create", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user2_id, item_id }),
+      });
+      if (!res.ok) throw new Error("Cannot start chat");
+      const chat = await res.json();
+      navigate(`/chat/${chat.chat_id}`);
+    } catch (err) {
+      console.error(err);
+      alert("Cannot start chat right now");
     }
-    return { id: chat.user1_id, username: chat.user1_username };
   };
 
   return (
     <div className="flex bg-gray-900 text-white h-full pt-16">
-      {/* 🔹 ฝั่งซ้าย: โพสต์ของ user */}
+      {/* ฝั่งซ้าย: โพสต์ของ user */}
       <div className="w-full sm:w-1/2 border-r border-white/40 p-5 overflow-y-auto">
         <h2 className="text-2xl font-bold mb-5">My Posts</h2>
-
         {userItems.length === 0 ? (
           <p className="text-gray-400">You haven’t posted anything yet 😅</p>
         ) : (
@@ -93,15 +114,14 @@ const ListChat = ({ currentUserId }) => {
                 <p className="mt-2 font-medium truncate">{item.title}</p>
                 <p className="text-sm text-gray-400">{item.category}</p>
 
-                {/* 🔹 ปุ่มลบใช้ไอคอน MdDeleteOutline */}
-                <div className="flex justify-end ">
+                <div className="flex justify-end">
                   <button
                     onClick={async () => {
                       if (window.confirm(`Delete "${item.title}" ?`)) {
                         try {
                           const res = await fetch(
                             `http://localhost:8000/api/items/${item.id}`,
-                            { method: "DELETE" }
+                            { method: "DELETE", credentials: "include" }
                           );
                           if (res.ok) {
                             setUserItems((prev) =>
@@ -128,7 +148,7 @@ const ListChat = ({ currentUserId }) => {
         )}
       </div>
 
-      {/* 🔹 ฝั่งขวา: รายการแชท */}
+      {/* ฝั่งขวา: รายการแชท */}
       <div className="w-full sm:w-1/2 overflow-y-auto">
         <div className="sticky top-0 bg-gray-900 z-20 px-5 pt-4 pb-6 border-b border-white/50">
           <h2 className="text-2xl font-bold">Messages</h2>
@@ -148,7 +168,6 @@ const ListChat = ({ currentUserId }) => {
                   onClick={() =>
                     navigate(`/chat/${chat.chat_id}`, {
                       state: {
-                        currentUserId,
                         otherUserId: partner.id,
                         ownerUsername: partner.username,
                         itemImage: chat.item_image || null,
@@ -170,22 +189,36 @@ const ListChat = ({ currentUserId }) => {
                     </div>
                   )}
 
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{partner.username}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{partner.username}</p>
 
-                    {chat.item_title && (
-                      <>
-                        <p className="text-sm text-white/80 truncate hidden sm:block">
-                          {chat.item_title}
-                        </p>
-                        <p className="text-sm text-white/80 truncate block sm:hidden">
-                          {partner.username} - {chat.item_title}
-                        </p>
-                      </>
-                    )}
-                  </div>
+                  {chat.item_title && (
+                    <>
+                      {/* แสดง title */}
+                      <p className="text-sm text-white/80 truncate hidden sm:block">
+                        {chat.item_title}
+                      </p>
 
-                  {/* เวลา */}
+                      {/* สำหรับมือถือ: title + เวลาแยกบรรทัด */}
+                      <div className="block sm:hidden">
+                        <p className="text-sm text-white/80 truncate">{chat.item_title}</p>
+                        <p className="text-xs text-white/60 mt-1">
+                          {chat.created_at
+                            ? new Date(chat.created_at).toLocaleString([], {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "-"}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+
                   <p className="text-xs text-white whitespace-nowrap hidden sm:block">
                     {new Date(chat.created_at).toLocaleString("en-EN", {
                       hour: "2-digit",

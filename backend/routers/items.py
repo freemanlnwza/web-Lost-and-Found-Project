@@ -4,32 +4,35 @@ import io
 from PIL import Image, ImageDraw, ImageFont
 from ultralytics import YOLO
 import crud, schemas, utils
-from crud import encode_image
+from crud import encode_image, get_current_user 
 from database import get_db
 import models
+  # ✅ นำเข้าฟังก์ชันสำหรับ cookie-based auth
 
 router = APIRouter(prefix="/api", tags=["Items"])
 yolo_model = YOLO("best.pt")
 
-# 🟢 เพิ่มการเก็บภาพต้นฉบับลงฐานข้อมูลด้วย
+# ============================
+# Upload item
+# ============================
 @router.post("/upload", response_model=schemas.ItemOut)
 async def upload_item(
     title: str = Form(...),
     type: str = Form(...),
     category: str = Form(...),
     image: UploadFile = File(...),
-    user_id: int = Form(...),
+    current_user: models.User = Depends(get_current_user),  # ✅ ใช้ cookie auth
     db: Session = Depends(get_db)
 ):
-    # ✅ ตรวจสอบไฟล์ภาพ
+    # ตรวจสอบไฟล์ภาพ
     if not image.filename.lower().endswith((".jpg", ".jpeg", ".png")):
         raise HTTPException(status_code=400, detail="File must be an image (jpg, jpeg, png)")
 
-    # ✅ อ่านภาพต้นฉบับ
+    # อ่านภาพต้นฉบับ
     image_bytes = await image.read()
     pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
-    # ✅ ตรวจจับวัตถุด้วย YOLO
+    # ตรวจจับวัตถุด้วย YOLO
     results = yolo_model.predict(pil_image)
     result = results[0]
 
@@ -91,22 +94,20 @@ async def upload_item(
         boxed_image_bytes = image_bytes
         confs = []
 
-    # ✅ เก็บทั้งภาพครอบ, ภาพกรอบ, และภาพเต็มลงฐานข้อมูล
+    # สร้าง Item
     item_in = schemas.ItemCreate(title=title, type=type, category=category)
     item = crud.create_item(
         db=db,
         item=item_in,
-        image_bytes=cropped_image_bytes,            # ภาพครอบ
+        image_bytes=cropped_image_bytes,
         image_filename=image.filename,
         image_content_type=image.content_type,
-        user_id=user_id,
-        boxed_image_data=boxed_image_bytes,         # ภาพใส่กรอบ
-        original_image_data=image_bytes,            # 🟢 เพิ่มภาพต้นฉบับเต็ม
-        image_emb = utils.validate_image_embedding(cropped_image_bytes)
-
+        user_id=current_user.id,  # ✅ ใช้ user จาก cookie
+        boxed_image_data=boxed_image_bytes,
+        original_image_data=image_bytes,
+        image_emb=utils.validate_image_embedding(cropped_image_bytes)
     )
 
-    # ✅ ส่ง response กลับ
     return schemas.ItemOut(
         id=item.id,
         title=item.title,
@@ -114,17 +115,20 @@ async def upload_item(
         category=item.category,
         image_data=encode_image(item.image_data, item.image_content_type),
         boxed_image_data=encode_image(item.boxed_image_data, "image/png"),
-        original_image_data=encode_image(item.original_image_data, item.image_content_type),  # 🟢 เพิ่มส่งภาพเต็มกลับ
+        original_image_data=encode_image(item.original_image_data, item.image_content_type),
         image_filename=item.image_filename,
         user_id=item.user_id,
         username=item.user.username if item.user else None,
         confidence_list=confs.tolist()
     )
 
-
-
+# ============================
+# Get lost items
+# ============================
 @router.get("/lost-items", response_model=list[schemas.ItemOut])
-def get_lost_items(db: Session = Depends(get_db)):
+def get_lost_items(
+    db: Session = Depends(get_db)
+):
     items = crud.get_items(db, type_filter="lost")
     return [
         schemas.ItemOut(
@@ -141,10 +145,12 @@ def get_lost_items(db: Session = Depends(get_db)):
         )
         for i in items
     ]
-
-@router.get("/items/user/{user_id}", response_model=list[schemas.ItemOut])
-def get_user_items(user_id: int, db: Session = Depends(get_db)):
-    items = db.query(models.Item).filter(models.Item.user_id == user_id).all()
+@router.get("/items/user", response_model=list[schemas.ItemOut])
+def get_my_items(
+    current_user: models.User = Depends(get_current_user),  # ✅ ต้อง login
+    db: Session = Depends(get_db)
+):
+    items = db.query(models.Item).filter(models.Item.user_id == current_user.id).all()
     return [
         schemas.ItemOut(
             id=i.id,
@@ -160,27 +166,48 @@ def get_user_items(user_id: int, db: Session = Depends(get_db)):
         )
         for i in items
     ]
+# ============================
+# Get items by user
+# ============================
 
+# ============================
+# Delete item
+# ============================
 @router.delete("/items/{item_id}")
-def delete_item(item_id: int, db: Session = Depends(get_db)):
+def delete_item(
+    item_id: int,
+    current_user: models.User = Depends(get_current_user),  # ✅ ต้อง login
+    db: Session = Depends(get_db)
+):
     item = db.query(models.Item).filter(models.Item.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
+    if item.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot delete others' items")
     db.delete(item)
     db.commit()
     return {"message": "Item deleted successfully"}
 
-
+# ============================
+# Get found items
+# ============================
 @router.get("/found-items", response_model=list[schemas.ItemOut])
-def get_found_items(db: Session = Depends(get_db)):
+def get_found_items(
+    current_user: models.User = Depends(get_current_user),  # ✅ ต้อง login
+    db: Session = Depends(get_db)
+):
     items = crud.get_items(db, type_filter="found")
     return [
         schemas.ItemOut(
-            id=i.id, title=i.title, type=i.type, category=i.category,
+            id=i.id,
+            title=i.title,
+            type=i.type,
+            category=i.category,
             image_data=encode_image(i.image_data, i.image_content_type),
             boxed_image_data=encode_image(i.boxed_image_data, i.image_content_type),
             image_filename=i.image_filename,
             user_id=i.user_id,
             username=i.user.username if i.user else None
-        ) for i in items
+        )
+        for i in items
     ]

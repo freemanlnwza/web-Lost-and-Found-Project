@@ -1,31 +1,56 @@
 from database import Base
-from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, DateTime, func, Text
+from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, DateTime, func, Text, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from pgvector.sqlalchemy import Vector
 
+class Session(Base):
+    __tablename__ = "sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    session_token = Column(String, unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 # ======================
 # User Model
 # ======================
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)  # ID ของผู้ใช้
-    username = Column(String, unique=True, nullable=False)  # ชื่อผู้ใช้ ต้องไม่ซ้ำ
-    password = Column(String, nullable=False)  # รหัสผ่านที่เข้ารหัสแล้ว
-    role = Column(String(20), default="user")  # สิทธิ์ของผู้ใช้ เช่น user, admin
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
+    email = Column(String(100), unique=True, index=True, nullable=False)
+    role = Column(String(20), default="user")
+    is_verified = Column(Boolean, default=True)  # 1=verified, 0=unverified (ใช้สำหรับ safety)
 
-    items = relationship("Item", back_populates="user", cascade="all, delete")  # รายการไอเท็มของผู้ใช้
-
-    # ข้อความที่ผู้ใช้ส่ง
+    items = relationship("Item", back_populates="user", cascade="all, delete")
     sent_messages = relationship("Message", back_populates="sender", cascade="all, delete")
-    # แชทที่ผู้ใช้เป็น user1
     chats_as_user1 = relationship("Chat", foreign_keys="Chat.user1_id", back_populates="user1", cascade="all, delete")
-    # แชทที่ผู้ใช้เป็น user2
     chats_as_user2 = relationship("Chat", foreign_keys="Chat.user2_id", back_populates="user2", cascade="all, delete")
-    # บันทึกการทำงานของ admin
     admin_logs = relationship("AdminLog", back_populates="admin")
 
+# ======================
+# TempUser Model (ใหม่)
+# ======================
+class TempUser(Base):
+    __tablename__ = "temp_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, nullable=False)
+    email = Column(String(100), unique=True, index=True, nullable=False)
+    password = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+# ======================
+# Email OTP Model
+# ======================
+class EmailOTP(Base):
+    __tablename__ = "email_otps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, nullable=False)
+    otp = Column(String, nullable=False)
+    expires_at = Column(DateTime, default=datetime.utcnow)
 
 # ======================
 # Item Model

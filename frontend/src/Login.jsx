@@ -79,6 +79,7 @@ const Login = ({ setIsAuthenticated }) => {
       const res = await fetch("http://localhost:8000/auth/login", {
         method: "POST",
         body: formData,
+        credentials: "include", 
       });
 
       const data = await res.json();
