@@ -138,13 +138,36 @@ class Report(Base):
     __tablename__ = "reports"
 
     id = Column(Integer, primary_key=True, index=True)
-    reporter_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    reported_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    item_id = Column(Integer, ForeignKey("items.id", ondelete="CASCADE"), nullable=True)
-    type = Column(String(20), nullable=False, default="item")  # item / chat / user
-    comment = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=False), server_default=func.now())
 
-    reporter = relationship("User", foreign_keys=[reporter_id])
-    reported_user = relationship("User", foreign_keys=[reported_user_id])
-    item = relationship("Item")
+    # ผู้รายงาน
+    reporter_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    reporter = relationship("User", foreign_keys=[reporter_id], passive_deletes=True)
+
+    # ผู้ถูกรายงาน
+    reported_user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    reported_user = relationship("User", foreign_keys=[reported_user_id], passive_deletes=True)
+
+    # FK สำหรับเชื่อมโยง แต่ nullable และไม่จำเป็นสำหรับ snapshot
+    item_id = Column(Integer, ForeignKey("items.id", ondelete="CASCADE"), nullable=True)
+    chat_id = Column(Integer, ForeignKey("chats.id", ondelete="CASCADE"), nullable=True)
+    item = relationship("Item", passive_deletes=True)
+    chat = relationship("Chat", passive_deletes=True)
+
+    # Snapshot ของเนื้อหาที่รายงาน
+    reported_username = Column(String, nullable=True)         # ชื่อผู้ใช้ที่ถูกรายงาน
+    reported_item_title = Column(String, nullable=True)       # ชื่อ item
+    reported_item_image = Column(Text, nullable=True)         # เก็บ base64 หรือ URL ของภาพ
+    reported_chat_preview = Column(Text, nullable=True)       # เก็บข้อความตัวอย่างจาก chat
+
+    # ประเภท report
+    type = Column(String(20), nullable=False, default="item")  # item / chat / user
+    comment = Column(Text, nullable=True)                       # comment ของ reporter
+    created_at = Column(DateTime(timezone=False), server_default=func.now())
