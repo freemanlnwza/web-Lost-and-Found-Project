@@ -168,7 +168,7 @@ const Login = ({ setIsAuthenticated }) => {
           <input type="checkbox" className="w-4 h-4 text-blue-500 border-gray-600 bg-gray-800" />
           Remember me
         </label>
-        <a href="#" className="text-blue-400 hover:underline text-right">
+        <a href="reset" className="text-blue-400 hover:underline text-right">
           Forgot password?
         </a>
       </div>
@@ -229,5 +229,3 @@ const Login = ({ setIsAuthenticated }) => {
 };
 
 export default Login;
-
-  

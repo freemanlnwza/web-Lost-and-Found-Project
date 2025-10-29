@@ -176,13 +176,7 @@ const Register = () => {
               required
             />
             {strongPassword && <p className="text-sm text-green-400 mt-1">Suggested strong password: {strongPassword}</p>}
-            <button
-              type="button"
-              onClick={fetchStrongPassword}
-              className="mt-1 text-sm font-semibold text-blue-400 hover:underline"
-            >
-              Generate Strong Password
-            </button>
+           
           </div>
 
           <div>
