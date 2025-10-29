@@ -133,3 +133,9 @@ class ChatCreateRequest(BaseModel):
 class MessageSendRequest(BaseModel):
     chat_id: int
     message: str  # sender_id ไม่จำเป็น เพราะ backend ใช้ current_user จาก cookie
+
+
+class ReportCreate(BaseModel):
+    item_id: int                 # ID ของ item ที่จะรายงาน
+    type: str = "item"           # default เป็น "item"
+    comment: str | None = ""     # comment เพิ่มเติม
