@@ -9,20 +9,105 @@ from datetime import datetime, timedelta
 import os
 import crud, schemas, models
 from database import get_db
-
+from models import User, EmailOTP
+from schemas import ResetRequest, VerifyOTPRequest, UpdatePasswordRequest
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
+MAX_OTP_ATTEMPTS = 5
+OTP_EXPIRE_MINUTES = 5
+OTP_REQUEST_COOLDOWN_SECONDS = 300  # กัน Spam OTP
 
-# ====================== ฟังก์ชันตรวจรหัสผ่าน ======================
-def is_strong_password(password: str) -> bool:
-    """ตรวจสอบความแข็งแรงของรหัสผ่าน"""
-    return bool(re.match(
-        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$',
-        password
-    ))
+# ====================== Step 1: Request Reset ======================
+@router.post("/reset-password/request")
+def request_reset(data: ResetRequest, db: Session = Depends(get_db)):
+    username = data.username
+    email = data.email
 
-# ====================== ฟังก์ชันส่งอีเมลด้วย SMTP ======================
+    # ตรวจสอบว่ามี user ตรงกัน
+    user = db.query(User).filter(User.username == username, User.email == email).first()
+    if not user:
+        # ถ้าไม่ตรงให้ raise 404 หรือส่งข้อความ error ไป frontend
+        raise HTTPException(status_code=404, detail="Username and email do not match")
+
+    # ตรวจสอบ cooldown
+    last_otp = db.query(EmailOTP).filter(EmailOTP.email == email).first()
+    if last_otp:
+        cooldown_end = last_otp.expires_at - timedelta(minutes=OTP_EXPIRE_MINUTES) + timedelta(seconds=OTP_REQUEST_COOLDOWN_SECONDS)
+        if datetime.utcnow() < cooldown_end:
+            raise HTTPException(status_code=429, detail="Hold on a moment before requesting a new OTP")
+
+    # สร้าง OTP แบบปลอดภัย
+    otp = f"{secrets.randbelow(900000) + 100000}"  # 6 หลัก
+    otp_hashed = hashlib.sha256(otp.encode()).hexdigest()
+    expires_at = datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES)
+
+    # ลบ OTP เก่าแล้วบันทึก OTP ใหม่
+    db.query(EmailOTP).filter(EmailOTP.email == email).delete()
+    db.add(EmailOTP(email=email, otp_hash=otp_hashed, expires_at=expires_at, attempts=0))
+    db.commit()
+
+    # ส่ง OTP ทางอีเมล
+    send_email_smtp(
+        to_email=email,
+        subject="Reset Password OTP",
+        body=f"Your OTP for resetting your password is: {otp}\nThis code is valid for {OTP_EXPIRE_MINUTES} minutes"
+    )
+
+    return {"message": "OTP has been sent to your email"}
+
+# ====================== Step 2: Verify OTP ======================
+@router.post("/reset-password/verify-otp")
+def verify_reset_otp(data: VerifyOTPRequest, db: Session = Depends(get_db)):
+    email = data.email
+    otp = data.otp
+
+    record = db.query(EmailOTP).filter(EmailOTP.email == email).first()
+    if not record:
+        raise HTTPException(status_code=400, detail="OTP Incorrect")
+
+    if datetime.utcnow() > record.expires_at:
+        db.delete(record)
+        db.commit()
+        raise HTTPException(status_code=400, detail="OTP Expired")
+
+    if record.attempts >= MAX_OTP_ATTEMPTS:
+        db.delete(record)
+        db.commit()
+        raise HTTPException(status_code=400, detail="Too many OTP attempts")
+
+    otp_hashed_input = hashlib.sha256(otp.encode()).hexdigest()
+    if otp_hashed_input != record.otp_hash:
+        record.attempts += 1
+        db.commit()
+        raise HTTPException(status_code=400, detail="OTP Incorrect")
+
+    return {"message": "OTP Correct ✅", "email": email}
+
+# ====================== Step 3: Update Password ======================
+@router.put("/reset-password/update")
+def update_password(data: UpdatePasswordRequest, db: Session = Depends(get_db)):
+    email = data.email
+    new_password = data.new_password
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
+
+    # ห้ามตั้งรหัสผ่านเดิม
+    if crud.verify_password(new_password, user.password):
+        raise HTTPException(status_code=400, detail="The new password must not be the same as the previous one")
+
+    if not crud.is_strong_password(new_password):
+        raise HTTPException(status_code=400, detail="Password is not strong")
+
+    user.password = crud.hash_password(new_password)
+    db.query(EmailOTP).filter(EmailOTP.email == email).delete()
+    db.commit()
+
+    return {"message": "Password changed successfully ✅"}
+
+# ====================== SMTP ======================
 def send_email_smtp(to_email: str, subject: str, body: str):
     sender_email = os.getenv("EMAIL_SENDER")
     app_password = os.getenv("EMAIL_APP_PASSWORD")
@@ -30,38 +115,35 @@ def send_email_smtp(to_email: str, subject: str, body: str):
         raise HTTPException(status_code=500, detail="Email credentials not set")
 
     msg = MIMEMultipart()
-    msg['From'] = sender_email
-    msg['To'] = to_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
+    msg["From"] = sender_email
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain"))
 
     try:
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
             server.login(sender_email, app_password)
             server.send_message(msg)
-            print(f"ส่งอีเมลไปยัง {to_email} สำเร็จ ✅")
-    except smtplib.SMTPAuthenticationError:
-        raise HTTPException(status_code=500, detail="SMTP Authentication failed.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"ส่งอีเมลไม่สำเร็จ")
+    except:
+        raise HTTPException(status_code=500, detail="Failed to send the email")
 
 # ====================== REGISTER ======================
 @router.post("/register")
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     # ตรวจ username / email ซ้ำ
     if crud.get_user_by_username(db, user.username):
-        raise HTTPException(status_code=400, detail="Username นี้ถูกใช้ไปแล้ว")
+        raise HTTPException(status_code=400, detail="Username is already taken")
     if db.query(models.User).filter(models.User.email == user.email).first():
-        raise HTTPException(status_code=400, detail="Email นี้ถูกใช้ไปแล้ว")
+        raise HTTPException(status_code=400, detail="Email is already taken")
 
     # ตรวจรูปแบบอีเมล
     if not re.fullmatch(r'[\w\.-]+@(gmail\.com|outlook\.com|yahoo\.com|hotmail\.com)', user.email):
-        raise HTTPException(status_code=400, detail="ต้องใช้อีเมล Gmail, Outlook, Yahoo, หรือ Hotmail เท่านั้น")
+        raise HTTPException(status_code=400, detail="Please use a Gmail, Outlook, Yahoo, Hotmail email address")
 
     # ตรวจรหัสผ่านแข็งแรง
-    if not is_strong_password(user.password):
-        raise HTTPException(status_code=400, detail="รหัสผ่านไม่แข็งแรงพอ")
+    if not crud.is_strong_password(user.password):
+        raise HTTPException(status_code=400, detail="Password is not strong")
 
     # สร้าง OTP
     otp = f"{random.randint(100000, 999999)}"
@@ -98,14 +180,14 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     # ส่ง OTP ทางอีเมล (ไม่ต้องใช้ transaction)
     send_email_smtp(
         to_email=user.email,
-        subject="ยืนยันอีเมลของคุณ",
-        body=f"รหัส OTP ของคุณคือ: {otp}\nรหัสนี้ใช้ได้ 5 นาที"
+        subject="Comfirm your email",
+        body=f"Your OTP is: {otp}\nThis code is valid for {OTP_EXPIRE_MINUTES} minutes"
     )
 
-    return {"message": "ส่ง OTP ไปยังอีเมลแล้ว", "email": user.email}
+    return {"message": "Your OTP has been sent to your email", "email": user.email}
 
 # ====================== VERIFY OTP ======================
-MAX_OTP_ATTEMPTS = 5
+
 
 @router.post("/verify-otp")
 def verify_otp(req: schemas.UserVerifyOTP, db: Session = Depends(get_db)):
@@ -114,31 +196,31 @@ def verify_otp(req: schemas.UserVerifyOTP, db: Session = Depends(get_db)):
 
     record = db.query(models.EmailOTP).filter(models.EmailOTP.email == email).first()
     if not record:
-        raise HTTPException(status_code=400, detail="ไม่พบ OTP สำหรับอีเมลนี้")
+        raise HTTPException(status_code=400, detail="No OTP found for this email")
 
     # ตรวจสอบหมดอายุ
     if datetime.utcnow() > record.expires_at:
         db.delete(record)
         db.commit()
-        raise HTTPException(status_code=400, detail="OTP หมดอายุ")
+        raise HTTPException(status_code=400, detail="OTP Expired")
 
     # ตรวจสอบจำนวนครั้ง
     if record.attempts >= MAX_OTP_ATTEMPTS:
         db.delete(record)
         db.commit()
-        raise HTTPException(status_code=400, detail="พยายาม OTP เกินจำนวนครั้ง")
+        raise HTTPException(status_code=400, detail="Too many OTP attempts")
 
     # ตรวจสอบ OTP
     otp_hashed_input = hashlib.sha256(otp_input.encode()).hexdigest()
     if otp_hashed_input != record.otp_hash:
         record.attempts += 1
         db.commit()
-        raise HTTPException(status_code=400, detail="OTP ไม่ถูกต้อง")
+        raise HTTPException(status_code=400, detail="OTP Incorrect")
 
     # ดึง TempUser
     temp_user = db.query(models.TempUser).filter(models.TempUser.email == email).first()
     if not temp_user:
-        raise HTTPException(status_code=400, detail="ไม่พบข้อมูลผู้ใช้ชั่วคราว")
+        raise HTTPException(status_code=400, detail="Incorrect information")
 
     # สร้าง User จริง
     new_user = models.User(
@@ -152,7 +234,7 @@ def verify_otp(req: schemas.UserVerifyOTP, db: Session = Depends(get_db)):
     db.delete(record)
     db.delete(temp_user)
     db.commit()   # ✅ ต้องมี commit
-    return {"message": "ยืนยัน OTP สำเร็จ! ลงทะเบียนเรียบร้อย ✅"}
+    return {"message": "OTP verification successful! Registration completed ✅"}
 
 
 # ====================== Login ======================

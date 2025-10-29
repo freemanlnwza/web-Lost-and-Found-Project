@@ -1,10 +1,4 @@
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Link,
-  useNavigate,
-  useLocation,
+import {BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation,
 } from "react-router-dom";
 import { useState, useEffect } from "react";
 import UploadPage from "./UploadPage.jsx";
@@ -19,6 +13,9 @@ import GuideBook from "./GuideBook.jsx";
 import AdminPage from "./AdminPage.jsx";
 import ListChat from "./ListChat.jsx";
 import Otp from "./Otp.jsx";
+import ResetPage from "./Reset.jsx";
+import ResetOTPPage from "./ResetOTP.jsx";
+import ResetPasswordPage from "./ResetPassword.jsx";
 
 // ✅ Wrapper สำหรับ Router
 function AppWrapper() {
@@ -197,7 +194,11 @@ function App() {
                 path="/otp"
                 element={<Otp />} 
               />
-              
+                 {/* หน้า Reset Password 3 หน้า */}
+        <Route path="/reset" element={<ResetPage />} />          {/* กรอก username + email */}
+        <Route path="/reset-otp" element={<ResetOTPPage />} />   {/* กรอก OTP */}
+        <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* กรอกรหัสใหม่ */}
+
             </Routes>
           </div>
         )}

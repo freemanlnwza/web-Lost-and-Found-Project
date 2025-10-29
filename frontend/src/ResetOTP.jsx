@@ -1,24 +1,23 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { CheckCircle, XCircle } from "lucide-react";
 
-const Otp = () => {
-  const location = useLocation();
+const ResetOTPPage = () => {
   const navigate = useNavigate();
-
-  const { username, email } = location.state || {};
+  const location = useLocation();
+  const email = location.state?.email;
 
   const [otp, setOtp] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(""); // แยก error เหมือน otp.jsx
   const [loading, setLoading] = useState(false);
-  const [popup, setPopup] = useState({ show: false, type: "success", message: "" });
+  const [attempts, setAttempts] = useState(0);
   const [disabled, setDisabled] = useState(false);
-  const [attempts, setAttempts] = useState(0); // ✅ นับจำนวนครั้งที่ลอง OTP
+  const [popup, setPopup] = useState({ show: false, type: "success", message: "" });
 
   if (!email) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
-        <p className="text-red-400 text-lg">⚠️ Invalid access. Please register first.</p>
+        <p className="text-red-400 text-lg">⚠️ Invalid access. Please request OTP first.</p>
       </div>
     );
   }
@@ -27,16 +26,13 @@ const Otp = () => {
     e.preventDefault();
     setError("");
 
-   
-
     if (attempts >= 5) {
-      // ถ้าเกิน 5 ครั้ง ให้ redirect กลับ register
       setPopup({
         show: true,
         type: "error",
         message: "You have entered the OTP too many times! Please try again",
       });
-      setTimeout(() => navigate("/register"), 2500);
+      setTimeout(() => navigate("/login"), 2500);
       return;
     }
 
@@ -44,39 +40,31 @@ const Otp = () => {
     setDisabled(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/auth/verify-otp", {
+      const res = await fetch("http://127.0.0.1:8000/auth/reset-password/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp }),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
-     if (!response.ok) {
-  if (data.detail === "OTP Expired") {
-    setPopup({
-      show: true,
-      type: "error",
-      message: "OTP Expired! Please Try again",
-    });
-    setTimeout(() => navigate("/register"), 2500);
-    return;
-  }
+      if (!res.ok) {
+        if (data.detail === "OTP Expired") {
+          setPopup({ show: true, type: "error", message: "OTP Expired! Please try again" });
+          setTimeout(() => navigate("/login"), 2500);
+          return;
+        }
 
-  setError(data.detail || "Invalid OTP. Please try again.");
-  setDisabled(false);
-  setAttempts(prev => prev + 1);
-  return;
-}
+        setError(data.detail || "Invalid OTP. Please try again.");
+        setDisabled(false);
+        setAttempts(prev => prev + 1);
+        return;
+      }
 
       // ✅ OTP ถูกต้อง
-      setPopup({
-        show: true,
-        type: "success",
-        message: "Registration successful! Redirecting to login...",
-      });
+      setPopup({ show: true, type: "success", message: "OTP verified! Redirecting to reset password..." });
+      setTimeout(() => navigate("/reset-password", { state: { email } }), 2500);
 
-      setTimeout(() => navigate("/login"), 2500);
     } catch (err) {
       console.error(err);
       setError("Connection error. Please try again.");
@@ -89,14 +77,14 @@ const Otp = () => {
   return (
     <main className="flex items-center justify-center min-h-screen bg-gray-900 px-4">
       <div className="w-full max-w-md bg-gray-800 p-8 rounded-2xl shadow-2xl border border-yellow-500 text-white space-y-6">
-        <h1 className="text-2xl font-bold text-center mb-4">Email Verification</h1>
+        <h1 className="text-2xl font-bold text-center mb-4">Reset Password OTP</h1>
         <p className="text-center text-gray-300">
-          We've sent The OTP to <span className="text-yellow-400">{email}</span>
+          Enter the OTP sent to <span className="text-yellow-400">{email}</span>
         </p>
 
         <form onSubmit={handleConfirmOtp} className="space-y-4">
           <div>
-            <label htmlFor="otp" className="block text-sm mb-1 text-gray-300">Enter OTP</label>
+            <label htmlFor="otp" className="block text-sm mb-1 text-gray-300">OTP Code</label>
             <input
               type="text"
               id="otp"
@@ -105,9 +93,9 @@ const Otp = () => {
               className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-yellow-500 focus:outline-none text-center tracking-widest text-lg"
               placeholder="••••••"
               disabled={disabled}
+              required
             />
             {error && <p className="text-red-400 text-sm mt-2 text-center">{error}</p>}
-            {/* แสดงจำนวนครั้ง */}
           </div>
 
           <button
@@ -122,7 +110,7 @@ const Otp = () => {
 
       {/* Popup Success / Error */}
       {popup.show && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50">
           <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-8 rounded-3xl shadow-2xl w-96 text-center border border-gray-700 transform animate-scale-in">
             <div className="mb-4 flex justify-center">
               {popup.type === "success" ? (
@@ -146,4 +134,4 @@ const Otp = () => {
   );
 };
 
-export default Otp;
+export default ResetOTPPage;
