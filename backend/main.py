@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import Base, engine
-from routers import detect, auth, items, search, chats, admin
+from routers import detect, auth, items, search, chats, admin,report
 
 # สร้างตารางถ้ายังไม่มี
 Base.metadata.create_all(bind=engine)
@@ -30,4 +30,5 @@ app.include_router(items.router)
 app.include_router(search.router)
 app.include_router(chats.router)
 app.include_router(admin.router)
+app.include_router(report.router)
 

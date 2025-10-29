@@ -130,3 +130,21 @@ class AdminLog(Base):
     timestamp = Column(DateTime(timezone=False), server_default=func.now())  # เวลาที่ทำ action
     
     admin = relationship("User", back_populates="admin_logs")  # ความสัมพันธ์ไปยังผู้ดูแล
+
+# ======================
+# Report Model
+# ======================
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    reporter_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    reported_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    item_id = Column(Integer, ForeignKey("items.id", ondelete="CASCADE"), nullable=True)
+    type = Column(String(20), nullable=False, default="item")  # item / chat / user
+    comment = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=False), server_default=func.now())
+
+    reporter = relationship("User", foreign_keys=[reporter_id])
+    reported_user = relationship("User", foreign_keys=[reported_user_id])
+    item = relationship("Item")
