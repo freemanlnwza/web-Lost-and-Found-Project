@@ -136,6 +136,7 @@ class MessageSendRequest(BaseModel):
 
 
 class ReportCreate(BaseModel):
-    item_id: int                 # ID ของ item ที่จะรายงาน
-    type: str = "item"           # default เป็น "item"
-    comment: str | None = ""     # comment เพิ่มเติม
+    item_id: Optional[int] = None       # ID ของ item ที่จะรายงาน (สามารถเป็น None)
+    chat_id: Optional[int] = None       # ID ของ chat ที่จะรายงาน (สามารถเป็น None)
+    type: str = "item"                  # default เป็น "item"
+    comment: Optional[str] = ""         # comment เพิ่มเติม
