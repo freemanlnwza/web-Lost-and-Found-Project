@@ -1,6 +1,7 @@
 import base64
 from sqlalchemy.orm import Session, joinedload
 import models
+import re
 from models import User, Item, Chat, Message
 import schemas
 import bcrypt
@@ -16,6 +17,19 @@ from database import get_db
 # ===========================
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+def is_strong_password(password: str) -> bool:
+    """ตรวจสอบความแข็งแรงของรหัสผ่าน"""
+    return bool(re.match(
+        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$',
+        password
+    ))
+# ===========================
+# ฟังก์ชันตรวจสอบรหัสผ่าน
+# ===========================
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """ตรวจสอบว่า plain_password ตรงกับ hashed_password หรือไม่"""
+    return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
 def create_user(db: Session, user: schemas.UserCreate) -> User:
     hashed_pw = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode()

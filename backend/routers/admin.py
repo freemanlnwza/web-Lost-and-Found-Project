@@ -18,16 +18,38 @@ def admin_get_users(admin: models.User = Depends(get_current_admin), db: Session
 
 
 @router.delete("/users/{user_id}")
-def admin_delete_user(user_id: int, admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
+def admin_delete_user(
+    user_id: int, 
+    admin: models.User = Depends(get_current_admin), 
+    db: Session = Depends(get_db)
+):
+    # ดึง user ก่อน
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # ป้องกันการลบ admin คนอื่นโดยไม่ได้ตั้งใจ
     if getattr(user, "role", "") == "admin":
         raise HTTPException(status_code=403, detail="Cannot delete admin users")
+
+    # ✅ ลบ session ที่อ้างอิงถึง user นี้ก่อน
+    db.query(models.Session).filter(models.Session.user_id == user_id).delete()
+
+    # ✅ ลบ user
     db.delete(user)
     db.commit()
-    crud.log_admin_action(db, admin.id, admin.username, f"Deleted username: {user.username}", action_type="delete_user")
-    return {"message": "User deleted"}
+
+    # ✅ Log action
+    crud.log_admin_action(
+        db,
+        admin.id,
+        admin.username,
+        f"Deleted username: {user.username}",
+        action_type="delete_user"
+    )
+
+    return {"message": "User deleted ✅"}
+
 
 
 @router.patch("/users/{target_user_id}/make-admin")

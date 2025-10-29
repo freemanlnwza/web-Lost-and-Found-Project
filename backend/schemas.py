@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
 
@@ -32,6 +32,18 @@ class UserOut(BaseModel):
 class UserVerifyOTP(BaseModel):
     email: str
     otp: str | None = None  
+
+class ResetRequest(BaseModel):
+    username: str
+    email: EmailStr
+
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+class UpdatePasswordRequest(BaseModel):
+    email: EmailStr
+    new_password: str
 # -------------------------
 # Item models
 # -------------------------
