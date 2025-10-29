@@ -88,49 +88,58 @@ const ListChat = () => {
     setReportError("");
   };
 
-  const submitReport = async () => {
-    if (!currentUserId || !reportingChat) return;
-    setSubmitting(true);
-    setReportError("");
+ const submitReport = async () => {
+  if (!currentUserId || !reportingChat) return;
+  setSubmitting(true);
+  setReportError("");
 
-    try {
-      const payload = {
-        chat_id: reportingChat.chat_id,
-        type: "chat",
-        comment: reportComment.trim() || "พบสิ่งผิดปกติ",
-      };
-
-      const res = await fetch("http://localhost:8000/api/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        let errText = "Report failed";
-        try {
-          const errJson = await res.json();
-          if (errJson && errJson.detail) errText = errJson.detail;
-        } catch {}
-        if (res.status === 401) {
-          setReportError("คุณยังไม่ได้ล็อกอินหรือ session หมดอายุ กรุณาล็อกอินใหม่");
-        } else {
-          setReportError(errText);
-        }
-        throw new Error(errText);
-      }
-
-      alert("Report submitted successfully ✅");
-      setReportingChat(null);
-      setReportComment("");
-    } catch (err) {
-      console.error(err);
-      if (!reportError) setReportError("ไม่สามารถรายงานได้ กรุณาลองใหม่");
-    } finally {
+  try {
+    // ตรวจสอบว่ามี item_id ถ้าไม่มี alert
+    if (!reportingChat.item_id) {
+      setReportError("Cannot report this chat because item_id is missing.");
       setSubmitting(false);
+      return;
     }
-  };
+
+    const payload = {
+  item_id: reportingChat.item_id ? Number(reportingChat.item_id) : null, // แปลงเป็น number หรือ null
+  chat_id: reportingChat.chat_id ? Number(reportingChat.chat_id) : null, // แปลง chat_id เป็น number หรือ null
+  type: "chat",
+  comment: (reportComment || "พบสิ่งผิดปกติ").trim(),
+};
+
+
+    const res = await fetch("http://localhost:8000/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      let errText = "Report failed";
+      try {
+        const errJson = await res.json();
+        if (errJson && errJson.detail) errText = errJson.detail;
+      } catch {}
+      if (res.status === 401) {
+        setReportError("คุณยังไม่ได้ล็อกอินหรือ session หมดอายุ กรุณาล็อกอินใหม่");
+      } else {
+        setReportError(errText);
+      }
+      throw new Error(errText);
+    }
+
+    alert("Report submitted successfully ✅");
+    setReportingChat(null);
+    setReportComment("");
+  } catch (err) {
+    console.error(err);
+    if (!reportError) setReportError("ไม่สามารถรายงานได้ กรุณาลองใหม่");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   if (loading)
     return <div className="flex justify-center items-center text-gray-400">Loading chats...</div>;

@@ -26,6 +26,7 @@ def get_or_create_chat(
         "user2_id": chat.user2_id,
         "user2_username": chat.user2.username if chat.user2 else None,
         "created_at": chat.created_at,
+        "item_id": chat.item_id, 
         "item_image": item_image,
         "item_title": chat.item.title if chat.item else None
     }
@@ -44,6 +45,7 @@ def get_user_chats(
         "user2_id": c.user2_id,
         "user2_username": c.user2.username if c.user2 else None,
         "created_at": c.created_at,
+        "item_id": c.item_id if c.item else None,
         "item_image": encode_image(c.item.image_data, c.item.image_content_type) if c.item else None,
         "item_title": c.item.title if c.item else None
     } for c in chats]
