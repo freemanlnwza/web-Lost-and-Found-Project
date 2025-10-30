@@ -3,10 +3,12 @@ import { motion } from "framer-motion";
 import { Users, FileText, MessageSquare, Trash2, Activity } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { HiArrowRightOnRectangle } from "react-icons/hi2";
+import { IoBanSharp } from "react-icons/io5";
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState([]);
   const [items, setItems] = useState([]);
+  const [reports, setReports] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -59,7 +61,13 @@ const AdminPage = () => {
         });
         if (!res.ok) throw new Error("Failed to fetch items");
         setItems(await res.json());
-      } else if (activeTab === "logs") {
+      } else if (activeTab === "reports") {
+        res = await fetch("http://localhost:8000/admin/reports", {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to fetch reports");
+        setReports(await res.json());
+      }else if (activeTab === "logs") {
         res = await fetch("http://localhost:8000/admin/logs", {
           credentials: "include",
         });
@@ -146,6 +154,16 @@ const handleDeleteItem = async (itemId) => {
   }
 };
 
+const handleDeleteReport = async (reportId) => {
+    if (!confirm("Delete this report?")) return;
+    const res = await fetch(`http://localhost:8000/admin/reports/${reportId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (res.ok) {
+      setReports(reports.filter(r => r.id !== reportId));
+    }
+  };
 
 
 const [totalLogs, setTotalLogs] = useState(0);
@@ -177,6 +195,10 @@ const stats = [
     purple: "text-purple-400",
     orange: "text-orange-400",
   };
+
+  // ======= แยก reports ตาม type =======
+  const itemReports = reports.filter(r => r.type === "item");
+  const chatReports = reports.filter(r => r.type === "chat");
 
   return (
    <div className="min-h-screen bg-blue-800 text-gray-100 flex flex-col p-4 space-y-4">
@@ -218,6 +240,7 @@ const stats = [
   {[
     { id: "users", label: "Users", icon: Users },
     { id: "items", label: "Items", icon: FileText },
+    { id: "reports", label: "Reports", icon: MessageSquare },
     { id: "logs", label: "Admin Logs", icon: Activity },
   ].map(tab => (
     <button
@@ -331,6 +354,68 @@ const stats = [
         </div>
       )}
 
+    {/* Reports Tab */}
+{activeTab === "reports" && (
+  <div className="space-y-6 p-2">
+    {["item", "chat"].map(type => {
+      const filteredReports = reports
+        .filter(r => r.type === type)
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      if (filteredReports.length === 0) return null;
+
+      const typeLabels = {
+        item: "📦 Item Reports",
+        chat: "💬 Chat Reports",
+      };
+
+      return (
+        <div key={type}>
+          <h3 className="text-lg text-black font-semibold mb-3 border-b border-blue-800 pb-1 w-full">
+            {typeLabels[type]} ({filteredReports.length})
+          </h3>
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+            {filteredReports.map((r) => (
+              <motion.div
+                key={r.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-blue-600/30 text-black rounded-xl p-4 border border-black flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
+              >
+                <div className="flex flex-col sm:flex-row sm:gap-4">
+             <p className="flex flex-wrap gap-2">
+              <span className="font-medium truncate">
+                {r.reporter_username || "Unknown"} Report {r.reported_username || "Unknown"}
+              </span>
+              <span className="text-medium text-black truncate">
+                [ From {r.type === "item"
+                  ? `Item: ${r.reported_item_title || "N/A"}`
+                  : `Chat: ${r.chat_id || "-"}`} ]
+              </span>
+            </p>
+                  <p className="text-sm text-black truncate mt-1">
+                    Reason : <span className="truncate">{r.comment}</span>
+                  </p>
+                </div>
+                <p className="text-sm text-black whitespace-nowrap">
+                  {new Date(r.created_at).toLocaleString()}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      );
+    })}
+
+    {reports.length === 0 && (
+      <p className="text-center text-gray-400 py-8">No reports found</p>
+    )}
+  </div>
+)}
+
+
+
+
       {/* Logs Tab */}
       {activeTab === "logs" && (
         <div className="space-y-6 p-2">
@@ -347,6 +432,7 @@ const stats = [
               delete_user: "🗑️ Delete User Logs",
               delete_post: "🧾 Delete Post Logs",
             };
+
 
             return (
               <div key={type}>

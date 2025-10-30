@@ -107,6 +107,29 @@ def admin_delete_message(message_id: int, admin: models.User = Depends(get_curre
     crud.log_admin_action(db, admin.id, admin.username, f"Deleted message (ID: {message_id})")
     return {"message": "Message deleted"}
 
+# ================= Reports =================
+@router.get("/reports")
+def admin_get_reports(admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
+    reports = db.query(models.Report).all()
+    result = []
+    for r in reports:
+        result.append({
+            "id": r.id,
+            "reporter_id": r.reporter_id,
+            "reporter_username": r.reporter.username if hasattr(r, "reporter") and r.reporter else None,
+            "reported_user_id": r.reported_user_id,
+            "reported_username": r.reported_username,
+            "item_id": r.item_id,
+            "reported_item_title": r.reported_item_title,
+            "reported_item_image": r.reported_item_image,
+            "chat_id": r.chat_id,
+            "reported_chat_preview": r.reported_chat_preview,
+            "type": r.type,
+            "comment": r.comment,
+            "created_at": r.created_at,
+        })
+    return result
+
 
 # ================= Logs =================
 @router.get("/logs")
