@@ -64,7 +64,7 @@ export default function GuideBook() {
   };
 
   return (
-    <div className={`min-h-screen px-4 py-12 transition-all duration-700 rounded-[12rem] ${
+    <div className={`min-h-screen  py-16 mt-4 transition-all duration-700  ${
       darkMode 
         ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-gray-100' 
         : 'bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 text-gray-800'
@@ -76,7 +76,7 @@ export default function GuideBook() {
         transition={{ duration: 0.6 }}
         className="max-w-3xl mx-auto flex items-center justify-between mb-12"
       >
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold bg-blue-700 bg-clip-text text-transparent">
           Lost and Found Guide Book
         </h1>
         <motion.button
@@ -152,16 +152,7 @@ export default function GuideBook() {
       </div>
 
       {/* Footer */}
-      <motion.p 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.8 }}
-        className={`text-center text-sm mt-16 transition-colors duration-300 ${
-          darkMode ? 'text-gray-500' : 'text-gray-400'
-        }`}
-      >
-        © 2025 Lost & Found. All Rights Reserved.
-      </motion.p>
+     
     </div>
   );
 }
