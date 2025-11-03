@@ -10,6 +10,8 @@ class Session(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     session_token = Column(String, unique=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)  # ✅ เพิ่มอายุ session
+
 # ======================
 # User Model
 # ======================

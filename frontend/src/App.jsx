@@ -1,4 +1,11 @@
-import {BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation,
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  useNavigate,
+  useLocation,
+  Navigate,
 } from "react-router-dom";
 import { useState, useEffect } from "react";
 import UploadPage from "./UploadPage.jsx";
@@ -16,6 +23,7 @@ import Otp from "./Otp.jsx";
 import ResetPage from "./Reset.jsx";
 import ResetOTPPage from "./ResetOTP.jsx";
 import ResetPasswordPage from "./ResetPassword.jsx";
+import { useCheckSession } from "./useCheckSession.jsx";
 
 // ✅ Wrapper สำหรับ Router
 function AppWrapper() {
@@ -43,6 +51,24 @@ function App() {
   const hideHeaderRoutes = ["/camera"];
   const location = useLocation();
   const shouldHideHeader = hideHeaderRoutes.includes(location.pathname);
+  const { checkSession } = useCheckSession();
+
+  // ✅ ตรวจสอบ session แต่ไม่บังคับ redirect ถ้าไม่มี session
+  useEffect(() => {
+    const verifySession = async () => {
+      const user = await checkSession();
+      if (user) {
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        localStorage.setItem("user", JSON.stringify(user));
+      } else {
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+        localStorage.removeItem("user");
+      }
+    };
+    verifySession();
+  }, [location.pathname]);
 
   useEffect(() => {
     const saved = localStorage.getItem("user");
@@ -158,47 +184,60 @@ function App() {
 
       {/* Content */}
       <main
-        className={`flex-1 flex  ${
+        className={`flex-1 flex ${
           !shouldHideHeader ? " bg-[#111827]" : "bg-black"
-        } `}
+        }`}
       >
         {shouldHideHeader ? (
           <Routes>
             <Route path="/camera" element={<CameraPage />} />
           </Routes>
         ) : (
-          <div className="w-full  text-white ">
+          <div className="w-full text-white">
             <Routes>
+              {/* ✅ ทุกคนเข้าถึงได้ */}
               <Route path="/" element={<UploadPage />} />
-              <Route
-                path="/lost"
-                element={<Lost currentUserId={currentUser?.id} />}
-              />
-              <Route
-                path="/login"
-                element={<Login setIsAuthenticated={setIsAuthenticated} />}
-              />
-              <Route path="/register" element={<Register />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/searchItem" element={<SearchPage />} />
-              <Route
-                path="/chat/:chatId"
-                element={<ChatPage currentUserId={currentUser?.id} />}
-              />
+              <Route path="/lost" element={<Lost currentUserId={currentUser?.id} />} />
               <Route path="/guidebook" element={<GuideBook />} />
+              <Route path="/searchItem" element={<SearchPage />} />
+              <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/otp" element={<Otp />} />
+              <Route path="/reset" element={<ResetPage />} />
+              <Route path="/reset-otp" element={<ResetOTPPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+              {/* 🔒 หน้าที่ต้องล็อกอินก่อนถึงจะเข้าได้ */}
+              <Route
+                path="/profile"
+                element={
+                  isAuthenticated ? (
+                    <Profile />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
               <Route
                 path="/chats"
-                element={<ListChat currentUserId={currentUser?.id} />}
+                element={
+                  isAuthenticated ? (
+                    <ListChat currentUserId={currentUser?.id} />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
               />
-               <Route
-                path="/otp"
-                element={<Otp />} 
+              <Route
+                path="/chat/:chatId"
+                element={
+                  isAuthenticated ? (
+                    <ChatPage currentUserId={currentUser?.id} />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
               />
-                 {/* หน้า Reset Password 3 หน้า */}
-        <Route path="/reset" element={<ResetPage />} />          {/* กรอก username + email */}
-        <Route path="/reset-otp" element={<ResetOTPPage />} />   {/* กรอก OTP */}
-        <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* กรอกรหัสใหม่ */}
-
             </Routes>
           </div>
         )}
@@ -243,16 +282,14 @@ const LogoutButton = ({ setIsAuthenticated, setCurrentUser }) => {
 
   const handleLogout = async () => {
     try {
-      // เรียก API logout ที่ backend
       await fetch("http://localhost:8000/auth/logout", {
         method: "POST",
-        credentials: "include", // สำคัญ! เพื่อส่ง cookie ไปให้ backend ลบ
+        credentials: "include",
       });
     } catch (error) {
       console.error("Logout API error:", error);
     }
 
-    // ล้างข้อมูลฝั่ง client
     localStorage.clear();
     sessionStorage.clear();
     setIsAuthenticated(false);

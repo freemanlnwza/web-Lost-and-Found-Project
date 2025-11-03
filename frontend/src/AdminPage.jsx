@@ -14,6 +14,47 @@ const AdminPage = () => {
   const [errorMsg, setErrorMsg] = useState(null);
   const contentRef = useRef(null);
   const navigate = useNavigate();
+  const useCheckSession = (navigate, currentUser) => {
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/auth/check-session", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          console.warn("Session invalid or expired.");
+          localStorage.clear();
+          sessionStorage.clear();
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!data?.user || data.user.role !== "admin") {
+          console.warn("Unauthorized access. Admin only.");
+          localStorage.clear();
+          sessionStorage.clear();
+          navigate("/login", { replace: true });
+        }
+      } catch (err) {
+        console.error("Session check error:", err);
+        localStorage.clear();
+        sessionStorage.clear();
+        navigate("/login", { replace: true });
+      }
+    };
+
+    checkSession();
+
+    // ✅ ตรวจซ้ำทุก 1 นาที (กัน session หมดอายุ)
+    const interval = setInterval(checkSession, 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [navigate, currentUser]);
+};
 
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem("user");
@@ -284,29 +325,25 @@ const stats = [
               </tr>
             </thead>
             <tbody>
-              {users.map(u => (
-                <tr key={u.id} className="border-b border-black/40 hover:bg-blue-600/30 text-black">
-                  <td className="py-4 px-4 font-medium">{u.id}</td>
-                  <td className="py-4 px-4 font-medium">{u.username}</td>
-                  <td className="py-4 px-4">
-                    <span className={`px-4 py-2 rounded-full text-sm ${u.role === 'admin' ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white'}`}>
-                      {u.role || 'user'}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 flex flex-wrap gap-2">
-                    {u.role !== 'admin' ? (
-                      <>
-                        <button onClick={() => handleMakeAdmin(u.id)} className="px-3 py-1 bg-yellow-400 text-white rounded-lg text-sm">Make Admin</button>
-                        <button onClick={() => handleDeleteUser(u.id)} className="text-red-500"><Trash2 size={18} /></button>
-                      </>
-                    ) : (
-                      u.id !== currentUser?.id && (
-                        <button onClick={() => handleRemoveAdmin(u.id)} className="px-3 py-1 bg-blue-800 text-white rounded-lg text-sm">Remove Admin</button>
-                      )
-                    )}
-                  </td>
-                </tr>
-              ))}
+             {users.map(u => (
+  <tr key={u.id} className="border-b border-black/40 hover:bg-blue-600/30 text-black">
+    <td className="py-4 px-4 font-medium">{u.id}</td>
+    <td className="py-4 px-4 font-medium">{u.username}</td>
+    <td className="py-4 px-4">
+      <span className={`px-4 py-2 rounded-full text-sm ${u.role === 'admin' ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white'}`}>
+        {u.role || 'user'}
+      </span>
+    </td>
+    <td className="py-4 px-4 flex flex-wrap gap-2">
+      {u.role !== 'admin' && (
+        <button onClick={() => handleDeleteUser(u.id)} className="text-red-500">
+          <Trash2 size={18} />
+        </button>
+      )}
+    </td>
+  </tr>
+))}
+
             </tbody>
           </table>
           {users.length === 0 && <p className="text-center text-black py-8">No users found</p>}

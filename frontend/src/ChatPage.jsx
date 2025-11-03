@@ -80,7 +80,7 @@ const showPopup = (msg, redirect = false) => {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         showPopup(
-          data.detail || "คุณไม่มีสิทธิ์เข้าถึงห้องนี้",
+          data.detail || "You don’t have permission to access this room",
           true // redirect to /
         );
         return;
@@ -106,7 +106,7 @@ const showPopup = (msg, redirect = false) => {
       setMessages(mapped);
     } catch (err) {
       console.error("fetchChatMessages error:", err);
-      showPopup("เกิดข้อผิดพลาดในการโหลดข้อความ", true);
+      showPopup("Failed to load the message", true);
     } finally {
       setLoading(false);
     }
@@ -149,7 +149,7 @@ const showPopup = (msg, redirect = false) => {
         // ----------------- File validation -----------------
         const maxSize = 5 * 1024 * 1024; // 5MB
         if (imageFile.size > maxSize) {
-          setErrorMsg("ไฟล์ใหญ่เกินไป จำกัด 5MB");
+          setErrorMsg("File too large — limit is 5MB");
           setMessages((prev) => prev.filter((m) => m.id !== tempId));
           return;
         }
@@ -201,7 +201,7 @@ const [confirmPopup, setConfirmPopup] = useState(null);
 
 const deleteMessage = (id) => {
   setConfirmPopup({
-    message: "คุณต้องการลบข้อความนี้หรือไม่?",
+    message: "Do you want to delete this message?",
     onConfirm: async () => {
       setConfirmPopup(null); // ปิด confirm ก่อนลบ
       try {
@@ -211,13 +211,13 @@ const deleteMessage = (id) => {
         );
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          showPopup(data.detail || "ลบไม่สำเร็จ");
+          showPopup(data.detail || "Failed to delete the item, Please try again");
           return;
         }
         setMessages((prev) => prev.filter((m) => m.id !== id));
       } catch (err) {
         console.error("deleteMessage error:", err);
-        showPopup("เกิดข้อผิดพลาดในการลบข้อความ");
+        showPopup("Error deleting the message");
       }
     },
   });
@@ -230,14 +230,14 @@ const handleFileChange = (e) => {
   if (!file) return;
 
   if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-    showPopup("สามารถส่งได้เฉพาะไฟล์รูปภาพและวิดีโอเท่านั้น");
+    showPopup("You can only upload image ");
     e.target.value = null;
     return;
   }
 
   const maxSize = 5 * 1024 * 1024;
   if (file.size > maxSize) {
-    showPopup("ไฟล์ใหญ่เกินไป จำกัด 5MB");
+    showPopup("File too large — limit is 5MB");
     e.target.value = null;
     return;
   }
@@ -474,13 +474,13 @@ const handleFileChange = (e) => {
             confirmPopup.onConfirm();
           }}
         >
-          ลบ
+          Delete
         </button>
         <button
           className="bg-gray-600 px-4 py-2 rounded hover:bg-gray-700"
           onClick={() => setConfirmPopup(null)}
         >
-          ยกเลิก
+          Cancle
         </button>
       </div>
     </div>
