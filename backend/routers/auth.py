@@ -1,6 +1,6 @@
 import hashlib
 import secrets, random, re
-from fastapi import APIRouter, Depends, Form, Response, HTTPException
+from fastapi import APIRouter, Cookie, Depends, Form, Response, HTTPException
 from sqlalchemy.orm import Session
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -17,6 +17,13 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 MAX_OTP_ATTEMPTS = 5
 OTP_EXPIRE_MINUTES = 5
 OTP_REQUEST_COOLDOWN_SECONDS = 300  # กัน Spam OTP
+
+SESSION_EXPIRE_MINUTES = 3
+SESSION_EXPIRE_DAYS = 7
+MAX_LOGIN_ATTEMPTS = 5
+LOCK_TIME_MINUTES = 1
+login_locks = {} 
+
 
 # ====================== Step 1: Request Reset ======================
 @router.post("/reset-password/request")
@@ -237,7 +244,40 @@ def verify_otp(req: schemas.UserVerifyOTP, db: Session = Depends(get_db)):
     return {"message": "OTP verification successful! Registration completed ✅"}
 
 
-# ====================== Login ======================
+
+# ------------------- Check Session -------------------
+@router.get("/check-session")
+def check_session(session_token: str = Cookie(None), db: Session = Depends(get_db)):
+    if not session_token:
+        raise HTTPException(status_code=401, detail="No session cookie found")
+
+    db_session = db.query(models.Session).filter(
+        models.Session.session_token == session_token
+    ).first()
+
+    if not db_session:
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    if db_session.expires_at < datetime.utcnow():
+        # ลบ session ที่หมดอายุ
+        db.delete(db_session)
+        db.commit()
+        raise HTTPException(status_code=401, detail="Session expired")
+
+    # session ยัง valid
+    user = db.query(models.User).filter(models.User.id == db_session.user_id).first()
+    return {
+        "status": "ok",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": getattr(user, "email", ""),
+            "role": getattr(user, "role", "")
+        }
+    }
+
+
+# ------------------- Login -------------------
 @router.post("/login", response_model=schemas.UserOut)
 def login_user(
     response: Response,
@@ -245,32 +285,83 @@ def login_user(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
+    # ตรวจสอบ username/password
     user = crud.authenticate_user(db, username, password)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+    now = datetime.utcnow()
+    lock_info = login_locks.get(username)
+
+    # ตรวจสอบว่าบัญชีถูกล็อกหรือไม่
+    if lock_info and lock_info.get("lock_until") and now < lock_info["lock_until"]:
+        diff = lock_info["lock_until"] - now
+        minutes = diff.seconds // 60
+        seconds = diff.seconds % 60
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "message": "Account locked due to too many failed attempts.",
+                "lock_until": lock_info["lock_until"].isoformat(),
+                "minutes": minutes,
+                "seconds": seconds
+            }
+        )
+
+    # ถ้า user ไม่มีหรือ password ไม่ตรง
+    if not user or not crud.verify_password(password, user.password):
+        # เพิ่มจำนวนครั้งที่พยายาม
+        if username not in login_locks:
+            login_locks[username] = {"attempts": 1, "lock_until": None}
+        else:
+            login_locks[username]["attempts"] += 1
+
+        # ถ้าเกินจำนวนครั้งสูงสุด -> ล็อกบัญชี
+        if login_locks[username]["attempts"] >= MAX_LOGIN_ATTEMPTS:
+            lock_until = now + timedelta(minutes=LOCK_TIME_MINUTES)
+            login_locks[username]["lock_until"] = lock_until
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "message": f"Too many failed attempts. Account locked for {LOCK_TIME_MINUTES} minutes.",
+                    "lock_until": lock_until.isoformat()
+                }
+            )
+
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    # ถ้าล็อกอินสำเร็จ → รีเซ็ตจำนวนครั้ง
+    login_locks.pop(username, None)
+
+    if not user.is_verified:
+        raise HTTPException(status_code=403, detail="Account not verified")
+
     # สร้าง session token
     token = secrets.token_hex(32)
-    db_session = models.Session(user_id=user.id, session_token=token)
+    expires_at = datetime.utcnow() + timedelta(minutes=SESSION_EXPIRE_MINUTES)
+    db_session = models.Session(user_id=user.id, session_token=token, expires_at=expires_at)
     db.add(db_session)
     db.commit()
-    
-    # ตั้ง HttpOnly cookie
+
+    # ตั้ง cookie
     response.set_cookie(
         key="session_token",
         value=token,
         httponly=True,
-        secure=False,  # ใช้ HTTPS ใน production
+        secure=False,
         samesite="lax",
         path="/",
-        max_age=60*60*24*7  # 7 วัน
+        max_age=SESSION_EXPIRE_MINUTES * 60
     )
-    
-    # บันทึก log ถ้าเป็น admin
+
+    # Log admin
     if getattr(user, "role", "") == "admin":
         crud.log_admin_action(db, user.id, user.username, "Admin logged in", action_type="login")
 
-    return user
+    # Return ข้อมูลผู้ใช้
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": getattr(user, "email", ""),
+        "role": getattr(user, "role", "")
+    }
 
 # ====================== Logout ======================
 @router.post("/logout")

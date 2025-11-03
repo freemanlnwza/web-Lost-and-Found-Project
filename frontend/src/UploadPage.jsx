@@ -66,7 +66,9 @@ const Popup = ({ type = "success", message, onClose, uploadedItem }) => {
                           <p className="text-gray-400">Type</p>
                           <span
                             className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                              item.type === "lost" ? "bg-red-500/20 text-red-400" : "bg-green-500/20 text-green-400"
+                              item.type === "lost"
+                                ? "bg-red-500/20 text-red-400"
+                                : "bg-green-500/20 text-green-400"
                             }`}
                           >
                             {item.type}
@@ -97,7 +99,9 @@ const Popup = ({ type = "success", message, onClose, uploadedItem }) => {
                           <p className="text-gray-400">Type</p>
                           <span
                             className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                              uploadedItem.type === "lost" ? "bg-red-500/20 text-red-400" : "bg-green-500/20 text-green-400"
+                              uploadedItem.type === "lost"
+                                ? "bg-red-500/20 text-red-400"
+                                : "bg-green-500/20 text-green-400"
                             }`}
                           >
                             {uploadedItem.type}
@@ -155,21 +159,19 @@ const UploadPage = () => {
   const [category, setCategory] = useState("");
   const [preview, setPreview] = useState(null);
   const [uploadedItem, setUploadedItem] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [showPopup, setShowPopup] = useState(false);
   const [popupType, setPopupType] = useState("success");
   const [popupMessage, setPopupMessage] = useState("");
   const [showMessagePopup, setShowMessagePopup] = useState(false);
 
-  // ===================== Load User and Camera Preview =====================
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    setIsAuthenticated(!!storedUser);
+  // ✅ popup ยืนยันก่อน submit
+  const [showConfirmPopup, setShowConfirmPopup] = useState(false);
 
+  // ===================== Load Camera Preview =====================
+  useEffect(() => {
     if (location.state?.capturedImage && !uploadedImage) {
       const captured = location.state.capturedImage;
-
       if (captured.startsWith("data:")) {
         fetch(captured)
           .then((res) => res.blob())
@@ -186,27 +188,13 @@ const UploadPage = () => {
       } else {
         setPreview(captured);
       }
-
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state, navigate, uploadedImage]);
 
-  // ===================== Login Requirement =====================
-  const requireLogin = () => {
-    if (!isAuthenticated) {
-      setPopupMessage("⚠ Login required to continue.");
-      setPopupType("warning");
-      setShowMessagePopup(true);
-      navigate("/login");
-      return false;
-    }
-    return true;
-  };
-
-  // ===================== Handle Image Upload =====================
+  // ===================== Handle Upload =====================
   const handleImageUpload = (fileOrDataURL) => {
-    if (!requireLogin() || !fileOrDataURL) return;
-
+    if (!fileOrDataURL) return;
     if (typeof fileOrDataURL === "string" && fileOrDataURL.startsWith("data:")) {
       fetch(fileOrDataURL)
         .then((res) => res.blob())
@@ -229,25 +217,9 @@ const UploadPage = () => {
   };
 
   const onFileChange = (e) => handleImageUpload(e.target.files[0]);
-
-  const onDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const onDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!requireLogin()) return;
-    const file = e.dataTransfer.files[0];
-    handleImageUpload(file);
-  };
-
-  const selectType = (type) => {
-    if (!requireLogin()) return;
-    setSelectedType(type);
-  };
-
+  const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
+  const onDrop = (e) => { e.preventDefault(); e.stopPropagation(); handleImageUpload(e.dataTransfer.files[0]); };
+  const selectType = (type) => setSelectedType(type);
   const resetForm = () => {
     setSelectedType("");
     setUploadedImage(null);
@@ -259,8 +231,6 @@ const UploadPage = () => {
 
   // ===================== Submit Form =====================
   const submitForm = async () => {
-    if (!requireLogin()) return;
-
     let imageFile = uploadedImage;
     if (!imageFile && preview) {
       try {
@@ -268,7 +238,7 @@ const UploadPage = () => {
         const blob = await res.blob();
         imageFile = new File([blob], "upload.png", { type: blob.type });
         setUploadedImage(imageFile);
-      } catch (err) {
+      } catch {
         setPopupMessage("Image can't upload, please try new Image.");
         setPopupType("error");
         setShowMessagePopup(true);
@@ -298,18 +268,13 @@ const UploadPage = () => {
         credentials: "include",
       });
 
-      if (!res.ok) {
-        setPopupMessage("Image can't upload, please try new Image.");
-        setPopupType("error");
-        setShowMessagePopup(true);
-        return;
-      }
+      if (!res.ok) throw new Error("Upload failed");
 
       const data = await res.json();
       setUploadedItem(data);
       setPopupType("success");
       setShowPopup(true);
-    } catch (error) {
+    } catch {
       setPopupMessage("Image can't upload, please try new Image.");
       setPopupType("error");
       setShowMessagePopup(true);
@@ -318,8 +283,6 @@ const UploadPage = () => {
 
   // ===================== Fetch Found Items =====================
   const fetchFoundItems = async () => {
-    if (!requireLogin()) return;
-
     try {
       let imageFile = uploadedImage;
       if (!imageFile && preview) {
@@ -349,7 +312,7 @@ const UploadPage = () => {
 
       const data = await res.json();
       navigate("/searchItem", { state: { foundItems: data } });
-    } catch (err) {
+    } catch {
       setPopupMessage("Search failed, please try again.");
       setPopupType("error");
       setShowMessagePopup(true);
@@ -357,23 +320,22 @@ const UploadPage = () => {
   };
 
   // ===================== UI =====================
+  const user = JSON.parse(localStorage.getItem("user"));
+
   return (
-    <main className="flex items-center justify-center h-full pt-16">
-      <div className="w-full max-w-xl bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl p-6 space-y-4 text-white border-2 border-yellow-500 mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center">Upload Image & Message</h1>
+    <main className="flex items-center justify-center h-full pt-24 pb-16 bg-gray-900">
+      <div className="w-full max-w-4xl bg-gray-800 bg-opacity-90 rounded-3xl shadow-2xl p-10 space-y-6 text-white border-2 border-gray-900 mx-auto animate-scale-in">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-center text-white drop-shadow-lg">
+          Upload Image & Message
+        </h1>
 
-        {!isAuthenticated && (
-          <p className="text-red-400 text-center">⚠ Please log in to continue.</p>
-        )}
-
-        {/* Category select */}
-        <div className="space-y-2">
-          <label className="block text-gray-300">Select item category :</label>
+        {/* Category */}
+        <div className="space-y-3">
+          <label className="block text-gray-300 text-lg">Select item category :</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            disabled={!isAuthenticated}
-            className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none disabled:opacity-50"
+            className="w-full p-4 rounded-xl border border-gray-700 bg-gray-900 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none text-base"
           >
             <option value="">-- SELECT --</option>
             <option value="Wallet">Wallet</option>
@@ -385,40 +347,30 @@ const UploadPage = () => {
         </div>
 
         {/* Camera Button */}
-        {isAuthenticated && (
+        {user && (
           <button
             onClick={() => navigate("/camera")}
-            className="w-full py-2 rounded-lg bg-green-600 hover:bg-green-700"
+            className="w-full py-3 rounded-xl text-lg font-semibold bg-green-600 hover:bg-green-700 transition-all"
           >
             📷 Open Camera
           </button>
         )}
 
-        {/* Upload File / Drag & Drop */}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={onFileChange}
-          ref={fileInputRef}
-          className="hidden"
-        />
+        {/* Upload File */}
+        <input type="file" accept="image/*" onChange={onFileChange} ref={fileInputRef} className="hidden" />
         <div
           onClick={() => fileInputRef.current?.click()}
           onDragOver={onDragOver}
           onDrop={onDrop}
-          className={`p-6 text-center border-2 border-dashed rounded-lg cursor-pointer ${
-            isAuthenticated
-              ? "border-gray-600 hover:border-violet-400 hover:bg-gray-800"
-              : "border-gray-700 bg-gray-800 opacity-50 cursor-not-allowed"
-          }`}
+          className="p-10 text-center border-2 border-dashed rounded-xl cursor-pointer border-gray-600 hover:border-violet-400 hover:bg-gray-800 transition-all"
         >
           {!preview ? (
-            <p className="text-gray-400">Click or drag file to upload / Capture from Camera</p>
+            <p className="text-gray-400 text-lg">Click or drag file to upload</p>
           ) : (
             <img
               src={preview}
               alt="Preview"
-              className="mx-auto mb-2 w-28 h-28 sm:w-32 sm:h-32 object-cover rounded-md"
+              className="mx-auto mb-3 w-40 h-40 sm:w-48 sm:h-48 object-cover rounded-xl shadow-md"
             />
           )}
         </div>
@@ -428,50 +380,64 @@ const UploadPage = () => {
           placeholder="Please describe the lost item..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          disabled={!isAuthenticated}
-          className="w-full p-3 h-24 rounded-lg border border-gray-700 bg-gray-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:outline-none disabled:opacity-50"
+          className="w-full p-4 h-32 rounded-xl border border-gray-700 bg-gray-900 text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:outline-none text-base"
         />
 
         {/* Select Type */}
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            type="button"
-            onClick={() => selectType("lost")}
-            disabled={!isAuthenticated}
-            className={`py-3 rounded-xl font-semibold text-sm sm:text-base transition-all ${
-              selectedType === "lost" ? "ring-2 ring-rose-400" : ""
-            } ${
-              !isAuthenticated
-                ? "bg-gray-700 opacity-50 cursor-not-allowed"
-                : "bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white"
-            }`}
-          >
-            📝 Report lost item
-          </button>
-
-          <button
-            type="button"
-            onClick={fetchFoundItems}
-            disabled={!isAuthenticated}
-            className={`py-3 rounded-xl font-semibold text-sm sm:text-base transition-all ${
-              !isAuthenticated
-                ? "bg-gray-700 opacity-50 cursor-not-allowed"
-                : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-            }`}
-          >
-            🔍 Found item
-          </button>
-        </div>
-
-        {/* Submit */}
+        {user && (
+          <div className="grid grid-cols-1 gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                selectType("lost");
+                setShowConfirmPopup(true);
+              }}
+              className={`w-full py-4 rounded-2xl font-semibold text-base transition-all ${
+                selectedType === "lost" ? "ring-2 ring-rose-400" : ""
+              } bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white`}
+            >
+              📝 Report lost item
+            </button>
+          </div>
+        )}
+        
+        {/* Found item */}
         <button
           type="button"
-          onClick={submitForm}
-          disabled={!isAuthenticated}
-          className="w-full py-3 rounded-full font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all disabled:opacity-50"
+          onClick={fetchFoundItems}
+          className="w-full py-4 rounded-2xl font-semibold text-base transition-all bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
         >
-          Confirm Upload
+          🔍 Found item
         </button>
+
+        {/* Confirm Popup */}
+        {showConfirmPopup && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-2xl max-w-md w-full mx-4 border border-gray-700 p-6 animate-scale-in text-center">
+              <h2 className="text-2xl font-bold text-yellow-400 mb-4">Confirm Report</h2>
+              <p className="text-gray-300 mb-6">
+                Are you sure you want to report this as a lost item?
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    setShowConfirmPopup(false);
+                    submitForm();
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition-all"
+                >
+                  ✅ Confirm
+                </button>
+                <button
+                  onClick={() => setShowConfirmPopup(false)}
+                  className="flex-1 py-3 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-semibold transition-all"
+                >
+                  ❌ Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Popups */}
         {showPopup && (
@@ -486,20 +452,22 @@ const UploadPage = () => {
         )}
 
         {showMessagePopup && (
-          <Popup
-            type={popupType}
-            message={popupMessage}
-            onClose={() => setShowMessagePopup(false)}
-          />
+          <Popup type={popupType} message={popupMessage} onClose={() => setShowMessagePopup(false)} />
         )}
       </div>
 
       <style jsx>{`
-        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes scale-in { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scale-in {
+          from { transform: scale(0.9); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
         .animate-fade-in { animation: fade-in 0.3s ease-out; }
-        .animate-scale-in { animation: scale-in 0.3s ease-out; }
-      `}</style> 
+        .animate-scale-in { animation: scale-in 0.4s ease-out; }
+      `}</style>
     </main>
   );
 };

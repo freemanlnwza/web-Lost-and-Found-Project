@@ -2,6 +2,22 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { MessageCircle, MapPin, Calendar, User } from "lucide-react";
 import { MdOutlineReportProblem } from "react-icons/md";
+import { IoSearchCircleSharp } from "react-icons/io5";
+
+<div className="flex-shrink-0 w-full sm:w-auto flex items-center justify-center sm:justify-end gap-2 sm:mx-4">
+  <div className="flex items-center bg-gray-800 border border-gray-700 rounded-lg px-2 focus-within:ring-2 focus-within:ring-blue-500 transition">
+    {/* 🔍 ไอคอนทางซ้าย */}
+    <IoSearchCircleSharp className="text-blue-400 text-2xl mr-2" />
+
+    {/* ช่องค้นหา */}
+    <input
+      type="text"
+      placeholder="Search by title..."
+      className="px-2 py-1.5 bg-transparent text-white text-sm focus:outline-none w-48 sm:w-56"
+      onChange={(e) => handleFilterChange(e.target.value)}
+    />
+  </div>
+</div>
 
 const Lost = ({ currentUserId }) => {
   const [items, setItems] = useState([]);
@@ -179,50 +195,58 @@ const Lost = ({ currentUserId }) => {
   }
 
   return (
-    <main className="h-full w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white pt-165 px-4 sm:px-6 lg:px-8">
+    <main className="h-full w-full bg-gray-900 text-white pt-165 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-      {/* Header */}
-<div className="sticky top-16 z-40 bg-gray-900 bg-opacity-90 backdrop-blur-md py-4 px-4 sm:px-6 lg:px-8 rounded-b-3xl shadow-lg flex items-center justify-between flex-wrap gap-3">
-  {/* ซ้าย: Title */}
-  <div className="flex-1 min-w-0">
-    <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold truncate mb-1">
-      Reported Lost Items
-    </h1>
-    <p className="text-gray-400 text-sm sm:text-base truncate">
-      Help reunite lost items with their owners
-    </p>
-  </div>
+{/* Header */}
+<div className="sticky top-16 z-40 bg-gray-800 bg-opacity-90 backdrop-blur-md py-4 px-4 sm:px-6 lg:px-8 rounded-b-3xl shadow-lg flex flex-col gap-3">
 
-  {/* กลาง: Search / Filter */}
-  <div className="flex-shrink-0 w-full sm:w-auto flex items-center justify-center sm:justify-end gap-2 sm:mx-4">
-    <input
-      type="text"
-      placeholder="Search by title..."
-      className="px-3 py-1.5 rounded-lg bg-gray-800 text-white text-sm border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-48 sm:w-56"
-      onChange={(e) => handleFilterChange(e.target.value)}
-    />
-  </div>
+  {/* Title + Toggle */}
+  <div className="flex justify-between items-center w-full">
+    {/* Title */}
+    <div className="flex-1 min-w-0">
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold truncate mb-1">
+        Reported Lost Items
+      </h1>
+    </div>
 
-  {/* ขวา: ปุ่ม toggle */}
-  <div className="flex-shrink-0 flex items-center">
+    {/* Toggle Button */}
     <button
       onClick={() => setShowActualImage(!showActualImage)}
-      className={`p-3 rounded-full transition-all flex items-center justify-center ${
+      className={`p-2 sm:p-3 rounded-full transition-all flex items-center justify-center ${
         showActualImage ? "bg-white" : "bg-yellow-500 hover:bg-yellow-600"
       }`}
       title={showActualImage ? "Show Container-Fit" : "Show Actual Image"}
     >
-      <img src="/public/arrow.png" alt="Toggle Image" className="h-4 w-4" />
+      <img src="/public/arrow.png" alt="Toggle Image" className="h-3 w-3 sm:h-4 sm:w-4" />
     </button>
   </div>
+
+  {/* Search (อยู่ล่างสุดของ Header, ตรงกลาง) */}
+  <div className="w-full flex justify-center">
+    <div className="flex items-center justify-center bg-gray-800 border border-gray-700 rounded-lg px-2 focus-within:ring-2 focus-within:ring-blue-500 transition w-full sm:w-1/2 md:w-200">
+      <IoSearchCircleSharp className="text-3xl sm:text-4xl mr-2" />
+      <input
+        type="text"
+        placeholder="Search..."
+        className="px-2 py-2 sm:py-3 bg-transparent text-white text-sm sm:text-ml focus:outline-none w-full"
+        onChange={(e) => handleFilterChange(e.target.value)}
+      />
+    </div>
+  </div>
+
 </div>
+
+
+
+
+
 
 
         {/* Items Grid */}
         <div className="pt-20">
           {items.length === 0 ? (
             <div className="text-center py-20">
-              <div className="bg-gray-900/70 backdrop-blur-lg rounded-3xl border border-gray-700 p-12 max-w-md mx-auto">
+              <div className="bg-gray-800 backdrop-blur-lg rounded-3xl border border-gray-700 p-12 max-w-md mx-auto">
                 <div className="text-6xl mb-4">🔍</div>
                 <p className="text-gray-300 text-xl font-medium mb-2">
                   No lost items reported yet
@@ -235,7 +259,7 @@ const Lost = ({ currentUserId }) => {
               {filteredItems.map((item) => (
                 <div
                   key={item.id}
-                  className="group relative bg-gray-900 border border-gray-700/50 rounded-3xl shadow-lg overflow-hidden hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-1 transition-all duration-300"
+                  className="group relative bg-gray-800 border border-gray-700/50 rounded-3xl shadow-lg overflow-hidden hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-1 transition-all duration-300"
                 >
                   {/* Image */}
                   <div className="relative w-full h-48 overflow-hidden rounded-t-3xl bg-gray-800">
@@ -254,9 +278,6 @@ const Lost = ({ currentUserId }) => {
                   {/* Content */}
                   <div className="p-4 space-y-2">
                     <div className="flex items-start space-x-2">
-                      <span className="text-2xl flex-shrink-0">
-                        {item.type === "lost" ? "🏷️" : "📦"}
-                      </span>
                       <h2 className="text-lg font-bold text-white leading-tight group-hover:text-blue-400 transition-colors">
                         {item.title}
                       </h2>

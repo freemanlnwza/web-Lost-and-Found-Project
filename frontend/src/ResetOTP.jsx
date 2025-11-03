@@ -76,7 +76,7 @@ const ResetOTPPage = () => {
 
   return (
     <main className="flex items-center justify-center min-h-screen bg-gray-900 px-4">
-      <div className="w-full max-w-md bg-gray-800 p-8 rounded-2xl shadow-2xl border border-yellow-500 text-white space-y-6">
+      <div className="w-full max-w-md bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-800 text-white space-y-6">
         <h1 className="text-2xl font-bold text-center mb-4">Reset Password OTP</h1>
         <p className="text-center text-gray-300">
           Enter the OTP sent to <span className="text-yellow-400">{email}</span>

@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Moon, Sun } from "lucide-react";
 
 const guides = [
     {
@@ -18,7 +17,6 @@ const guides = [
                 5. ยืนยันข้อมูล - กด “คอนเฟิร์ม” ข้อมูลจะถูกส่งไปยังหน้าของ Lost หรือ Found <br />
             </>
         ),
-
     },
     {
         title: "Post / Found / chat",
@@ -42,57 +40,21 @@ const guides = [
 ];
 
 export default function GuideBook() {
-  const [darkMode, setDarkMode] = useState(false);
   const [openIndex, setOpenIndex] = useState(null);
 
-  useEffect(() => {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setDarkMode(prefersDark);
-  }, []);
-
-  useEffect(() => {
-    const html = document.documentElement;
-    if (darkMode) {
-      html.classList.add('dark');
-    } else {
-      html.classList.remove('dark');
-    }
-  }, [darkMode]);
-
-  const toggleDarkMode = () => {
-    setDarkMode(prev => !prev);
-  };
-
   return (
-    <div className={`min-h-screen  py-16 mt-4 transition-all duration-700  ${
-      darkMode 
-        ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-gray-100' 
-        : 'bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 text-gray-800'
-    }`}>
+    <div className="min-h-screen py-16 mt-4 transition-all duration-700 bg-gray-900 text-gray-100">
       {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="max-w-3xl mx-auto flex items-center justify-between mb-12"
-      >
-        <h1 className="text-4xl font-bold bg-blue-700 bg-clip-text text-transparent">
-          Lost and Found Guide Book
-        </h1>
-        <motion.button
-          whileHover={{ scale: 1.1, rotate: 180 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={toggleDarkMode}
-          className={`p-3 rounded-full backdrop-blur-lg transition-all duration-300 shadow-lg ${
-            darkMode 
-              ? 'bg-gray-700/50 hover:bg-gray-600/50 shadow-blue-500/20' 
-              : 'bg-white/50 hover:bg-white/80 shadow-gray-300/50'
-          }`}
-          title="Toggle Dark Mode"
-        >
-          {darkMode ? <Sun size={22} className="text-yellow-400" /> : <Moon size={22} className="text-indigo-600" />}
-        </motion.button>
-      </motion.div>
+       <motion.div 
+    initial={{ opacity: 0, y: -20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.6 }}
+    className="max-w-3xl mx-auto mb-12 flex justify-center"
+  >
+    <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-white text-center">
+      Lost and Found Guide Book
+    </h1>
+  </motion.div>
 
       {/* Accordion Section */}
       <div className="max-w-3xl mx-auto space-y-6">
@@ -103,26 +65,18 @@ export default function GuideBook() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: index * 0.1 }}
             whileHover={{ scale: 1.02, y: -4 }}
-            className={`rounded-[2rem] overflow-hidden backdrop-blur-md transition-all duration-500 ${
-              darkMode 
-                ? 'bg-gray-800/50 border border-gray-700/30 hover:bg-gray-800/70 hover:border-gray-600/50 shadow-2xl hover:shadow-blue-500/20' 
-                : 'bg-white/70 border border-gray-200/40 hover:bg-white/90 hover:border-gray-300/60 shadow-2xl hover:shadow-blue-300/30'
-            }`}
+            className="rounded-[2rem] overflow-hidden backdrop-blur-md transition-all duration-500 bg-gray-800/70 border border-gray-700/50 hover:bg-gray-800/90 shadow-2xl hover:shadow-blue-500/20"
           >
             <motion.button
               whileHover={{ x: 4 }}
               onClick={() => setOpenIndex(openIndex === index ? null : index)}
-              className={`w-full text-left px-8 py-6 flex justify-between items-center transition-all duration-300 ${
-                darkMode
-                  ? 'hover:bg-gray-700/30'
-                  : 'hover:bg-gray-50/50'
-              }`}
+              className="w-full text-left px-8 py-6 flex justify-between items-center transition-all duration-300 hover:bg-gray-700/30"
             >
               <span className="font-semibold text-lg">{item.title}</span>
               <motion.span
                 animate={{ rotate: openIndex === index ? 180 : 0 }}
                 transition={{ duration: 0.4, type: "spring", stiffness: 200 }}
-                className={`text-xl ${darkMode ? 'text-blue-400' : 'text-indigo-600'}`}
+                className="text-xl text-white"
               >
                 ▼
               </motion.span>
@@ -135,13 +89,9 @@ export default function GuideBook() {
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.4, ease: "easeInOut" }}
-                  className={`overflow-hidden`}
+                  className="overflow-hidden"
                 >
-                  <div className={`px-8 py-6 leading-relaxed ${
-                    darkMode 
-                      ? 'bg-gray-900/50 text-gray-300 border-t border-gray-700/50' 
-                      : 'bg-gray-50/50 text-gray-700 border-t border-gray-200/50'
-                  }`}>
+                  <div className="px-8 py-6 leading-relaxed bg-gray-900/80 text-gray-100 border-t border-gray-700/50">
                     {item.content}
                   </div>
                 </motion.div>
@@ -150,9 +100,6 @@ export default function GuideBook() {
           </motion.div>
         ))}
       </div>
-
-      {/* Footer */}
-     
     </div>
   );
 }

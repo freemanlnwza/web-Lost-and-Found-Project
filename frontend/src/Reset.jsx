@@ -60,7 +60,7 @@ const ResetPage = () => {
 
   return (
     <main className="flex items-center justify-center h-full pt-14 px-4 sm:px-6 lg:px-8 bg-gray-900">
-      <div className="w-full max-w-md bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl p-6 sm:p-8 md:p-10 space-y-6 text-white border-2 border-yellow-500 mx-auto">
+      <div className="w-full max-w-md bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl p-6 sm:p-8 md:p-10 space-y-6 text-white border-2 border-gray-800 mx-auto">
         <div className="text-center">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">
             Reset Password
