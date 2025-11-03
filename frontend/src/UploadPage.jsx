@@ -5,11 +5,11 @@ import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
 // ===================== Popup Component =====================
 const Popup = ({ type = "success", message, onClose, uploadedItem }) => {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl shadow-2xl max-w-2xl w-full mx-4 border border-gray-700 transform animate-scale-in overflow-hidden">
+    <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in p-4">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl shadow-2xl w-full sm:max-w-xl md:max-w-2xl transform animate-scale-in overflow-hidden border border-gray-700">
         {/* Header */}
         <div
-          className={`p-6 ${
+          className={`p-4 sm:p-6 flex items-center justify-between ${
             type === "success"
               ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20"
               : type === "error"
@@ -17,110 +17,67 @@ const Popup = ({ type = "success", message, onClose, uploadedItem }) => {
               : "bg-gradient-to-r from-yellow-500/20 to-orange-500/20"
           }`}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3">
+            <div
+              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center ${
+                type === "success"
+                  ? "bg-green-500/20"
+                  : type === "error"
+                  ? "bg-red-500/20"
+                  : "bg-yellow-500/20"
+              }`}
+            >
               {type === "success" ? (
-                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <CheckCircle className="text-green-400" size={28} />
-                </div>
+                <CheckCircle className="text-green-400" size={24} />
               ) : type === "error" ? (
-                <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
-                  <XCircle className="text-red-400" size={28} />
-                </div>
+                <XCircle className="text-red-400" size={24} />
               ) : (
-                <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
-                  <AlertCircle className="text-yellow-400" size={28} />
-                </div>
+                <AlertCircle className="text-yellow-400" size={24} />
               )}
-              <h2
-                className={`text-2xl font-bold ${
-                  type === "success"
-                    ? "text-green-400"
-                    : type === "error"
-                    ? "text-red-400"
-                    : "text-yellow-400"
-                }`}
-              >
-                {type === "success" ? "Success!" : type === "error" ? "Error" : "Notice"}
-              </h2>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
-              <XCircle size={24} />
-            </button>
+            <h2
+              className={`text-lg sm:text-2xl font-bold ${
+                type === "success"
+                  ? "text-green-400"
+                  : type === "error"
+                  ? "text-red-400"
+                  : "text-yellow-400"
+              }`}
+            >
+              {type === "success" ? "Success!" : type === "error" ? "Error" : "Notice"}
+            </h2>
           </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <XCircle size={20} />
+          </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6 max-h-[70vh] overflow-y-auto space-y-4">
           {uploadedItem ? (
             <div className="space-y-4">
-              {Array.isArray(uploadedItem)
-                ? uploadedItem.map((item, idx) => (
-                    <div key={idx} className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-                      <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                        <div>
-                          <p className="text-gray-400">Title</p>
-                          <p className="text-white font-semibold">{item.title}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-400">Type</p>
-                          <span
-                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                              item.type === "lost"
-                                ? "bg-red-500/20 text-red-400"
-                                : "bg-green-500/20 text-green-400"
-                            }`}
-                          >
-                            {item.type}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-gray-400">Category</p>
-                          <p className="text-white font-semibold">{item.category}</p>
-                        </div>
-                      </div>
-                      {item.boxed_image_data && (
-                        <img
-                          src={item.boxed_image_data}
-                          alt="Detected result"
-                          className="w-full rounded-lg object-contain bg-gray-900"
-                        />
-                      )}
-                    </div>
-                  ))
-                : uploadedItem && (
-                    <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-                      <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                        <div>
-                          <p className="text-gray-400">Title</p>
-                          <p className="text-white font-semibold">{uploadedItem.title}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-400">Type</p>
-                          <span
-                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                              uploadedItem.type === "lost"
-                                ? "bg-red-500/20 text-red-400"
-                                : "bg-green-500/20 text-green-400"
-                            }`}
-                          >
-                            {uploadedItem.type}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-gray-400">Category</p>
-                          <p className="text-white font-semibold">{uploadedItem.category}</p>
-                        </div>
-                      </div>
-                      {uploadedItem.boxed_image_data && (
-                        <img
-                          src={uploadedItem.boxed_image_data}
-                          alt="Detected result"
-                          className="w-full rounded-lg object-contain bg-gray-900"
-                        />
-                      )}
+              {(Array.isArray(uploadedItem) ? uploadedItem : [uploadedItem]).map((item, idx) => (
+                <div
+                  key={idx}
+                  className="relative bg-gray-800/50 rounded-xl border border-gray-700 overflow-hidden w-full flex flex-col sm:flex-row"
+                >
+                  {/* Left side: Title + Category */}
+                  <div className="w-full sm:w-[40%] p-4 flex flex-col justify-center gap-2">
+                    <p className="text-white font-semibold text-sm sm:text-sm">Title : {item.title}</p>
+                    <p className="text-white font-semibold text-sm sm:text-sm">Category : {item.category}</p>
+                  </div>
+
+                  {/* Right side: Image */}
+                  {item.boxed_image_data && (
+                    <div className="w-full sm:w-[60%] flex justify-center items-center p-4">
+                      <img
+                        src={item.boxed_image_data}
+                        alt="Detected result"
+                        className="w-full h-80 sm:h-96 object-contain bg-gray-900 rounded-xl"
+                      />
                     </div>
                   )}
+                </div>
+              ))}
             </div>
           ) : (
             <p className="text-gray-300 text-center">{message}</p>
@@ -128,7 +85,7 @@ const Popup = ({ type = "success", message, onClose, uploadedItem }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-6 bg-gray-800/50 border-t border-gray-700">
+        <div className="p-4 sm:p-6 bg-gray-800/50 border-t border-gray-700">
           <button
             onClick={onClose}
             className={`w-full py-3 rounded-xl font-semibold text-white transition-all transform hover:scale-105 active:scale-95 ${
@@ -165,32 +122,52 @@ const UploadPage = () => {
   const [popupMessage, setPopupMessage] = useState("");
   const [showMessagePopup, setShowMessagePopup] = useState(false);
 
-  // ✅ popup ยืนยันก่อน submit
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // ✅ Lock ปุ่ม
+  const [cooldown, setCooldown] = useState(false);
+  const [cooldownTime, setCooldownTime] = useState(0);
+  const [showCooldownPopup, setShowCooldownPopup] = useState(false);
 
+  useEffect(() => {
+  let timer;
+  if (cooldown && cooldownTime > 0) {
+    timer = setInterval(() => {
+      setCooldownTime((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setCooldown(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }
+  return () => clearInterval(timer);
+}, [cooldown, cooldownTime]);
   // ===================== Load Camera Preview =====================
   useEffect(() => {
-    if (location.state?.capturedImage && !uploadedImage) {
-      const captured = location.state.capturedImage;
-      if (captured.startsWith("data:")) {
-        fetch(captured)
-          .then((res) => res.blob())
-          .then((blob) => {
-            const file = new File([blob], "captured.png", { type: blob.type });
-            setUploadedImage(file);
-            setPreview(captured);
-          })
-          .catch(() => {
-            setPopupMessage("Image can't upload, please try new Image.");
-            setPopupType("error");
-            setShowMessagePopup(true);
-          });
-      } else {
-        setPreview(captured);
-      }
-      navigate(location.pathname, { replace: true, state: {} });
+  if (location.state?.capturedImage && !uploadedImage) {
+    const captured = location.state.capturedImage;
+
+    if (captured.startsWith("data:")) {
+      fetch(captured)
+        .then((res) => res.blob())
+        .then((blob) => {
+          const file = new File([blob], "captured.png", { type: blob.type });
+          setUploadedImage(file);
+          setPreview(captured);
+        })
+        .catch(() => {
+          setPopupMessage("Cannot load captured image, please retake.");
+          setPopupType("error");
+          setShowMessagePopup(true);
+        });
     }
-  }, [location.state, navigate, uploadedImage]);
+
+    navigate(location.pathname, { replace: true, state: {} });
+  }
+}, [location.state, navigate, uploadedImage]);
+
 
   // ===================== Handle Upload =====================
   const handleImageUpload = (fileOrDataURL) => {
@@ -230,56 +207,59 @@ const UploadPage = () => {
   };
 
   // ===================== Submit Form =====================
-  const submitForm = async () => {
-    let imageFile = uploadedImage;
-    if (!imageFile && preview) {
-      try {
-        const res = await fetch(preview);
-        const blob = await res.blob();
-        imageFile = new File([blob], "upload.png", { type: blob.type });
-        setUploadedImage(imageFile);
-      } catch {
-        setPopupMessage("Image can't upload, please try new Image.");
-        setPopupType("error");
-        setShowMessagePopup(true);
-        return;
-      }
-    }
+  
+const submitForm = async () => {
+  if (isSubmitting || cooldown) {
+    setPopupMessage("Please wait before uploading again.");
+    setPopupType("warning");
+    setShowCooldownPopup(true); // ✅ แสดง popup คูลดาวน์
+    return;
+  }
 
-    if (!imageFile || !message || !selectedType || !category) {
-      setPopupMessage("Please complete all fields and select an item category.");
-      setPopupType("warning");
-      setShowMessagePopup(true);
-      return;
-    }
+  // ตรวจสอบข้อมูลก่อนส่ง
+  if (!uploadedImage && !message) {
+    setPopupMessage("Please select an image or enter a description.");
+    setPopupType("warning");
+    setShowMessagePopup(true);
+    return;
+  }
 
-    const formData = new FormData();
-    formData.append("image", imageFile);
-    formData.append("title", message);
-    formData.append("type", selectedType);
-    formData.append("category", category);
-    const user = JSON.parse(localStorage.getItem("user"));
-    formData.append("user_id", user?.id || 0);
+  setIsSubmitting(true);
 
-    try {
-      const res = await fetch("http://localhost:8000/api/upload", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
+  const formData = new FormData();
+  formData.append("image", uploadedImage);
+  formData.append("title", message);
+  formData.append("type", selectedType);
+  formData.append("category", category);
+  const user = JSON.parse(localStorage.getItem("user"));
+  formData.append("user_id", user?.id || 0);
 
-      if (!res.ok) throw new Error("Upload failed");
+  try {
+    const res = await fetch("http://localhost:8000/api/upload", {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
 
-      const data = await res.json();
-      setUploadedItem(data);
-      setPopupType("success");
-      setShowPopup(true);
-    } catch {
-      setPopupMessage("Image can't upload, please try new Image.");
-      setPopupType("error");
-      setShowMessagePopup(true);
-    }
-  };
+    if (!res.ok) throw new Error("Upload failed");
+
+    const data = await res.json();
+    setUploadedItem(data);
+    setPopupType("success");
+    setShowPopup(true);
+
+    // ✅ เริ่มคูลดาวน์ 1 นาที (60 วินาที)
+    setCooldown(true);
+    setCooldownTime(60);
+  } catch {
+    setPopupMessage("Upload failed, please try again.");
+    setPopupType("error");
+    setShowMessagePopup(true);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   // ===================== Fetch Found Items =====================
   const fetchFoundItems = async () => {
@@ -319,7 +299,6 @@ const UploadPage = () => {
     }
   };
 
-  // ===================== UI =====================
   const user = JSON.parse(localStorage.getItem("user"));
 
   return (
@@ -386,21 +365,22 @@ const UploadPage = () => {
         {/* Select Type */}
         {user && (
           <div className="grid grid-cols-1 gap-4">
-            <button
-              type="button"
-              onClick={() => {
-                selectType("lost");
-                setShowConfirmPopup(true);
-              }}
-              className={`w-full py-4 rounded-2xl font-semibold text-base transition-all ${
-                selectedType === "lost" ? "ring-2 ring-rose-400" : ""
-              } bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white`}
-            >
-              📝 Report lost item
-            </button>
+           <button
+  type="button"
+  onClick={() => {
+    selectType("lost");
+    setShowConfirmPopup(true);
+  }}
+  disabled={isSubmitting || cooldown} // ✅ กัน spam ระหว่าง cooldown
+  className={`w-full py-4 rounded-2xl font-semibold text-base transition-all ${
+    selectedType === "lost" ? "ring-2 ring-rose-400" : ""
+  } bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+>
+  📝 Report lost item
+</button>
           </div>
         )}
-        
+
         {/* Found item */}
         <button
           type="button"
@@ -421,10 +401,12 @@ const UploadPage = () => {
               <div className="flex gap-4">
                 <button
                   onClick={() => {
+                    if (isSubmitting) return;
                     setShowConfirmPopup(false);
                     submitForm();
                   }}
-                  className="flex-1 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition-all"
+                  className="flex-1 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmitting} // ✅ ป้องกัน spam
                 >
                   ✅ Confirm
                 </button>
@@ -455,6 +437,23 @@ const UploadPage = () => {
           <Popup type={popupType} message={popupMessage} onClose={() => setShowMessagePopup(false)} />
         )}
       </div>
+
+      {showCooldownPopup && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
+    <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-2xl max-w-sm w-full mx-4 border border-gray-700 p-6 animate-scale-in text-center">
+      <h2 className="text-2xl font-bold text-yellow-400 mb-4">Cooldown Active</h2>
+      <p className="text-gray-300 mb-6">
+        Please wait <span className="text-yellow-400 font-bold">{cooldownTime}s</span> before uploading again.
+      </p>
+      <button
+        onClick={() => setShowCooldownPopup(false)}
+        className="w-full py-3 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-white font-semibold transition-all"
+      >
+        OK
+      </button>
+    </div>
+  </div>
+)}
 
       <style jsx>{`
         @keyframes fade-in {
