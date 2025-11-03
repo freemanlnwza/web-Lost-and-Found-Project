@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { PiImagesSquareDuotone } from "react-icons/pi";
 
 const SearchPage = () => {
   const location = useLocation();
@@ -30,12 +31,16 @@ const SearchPage = () => {
 
         {/* Toggle Button */}
         <div className="flex justify-end">
-          <button
-            onClick={() => setShowActualImage(!showActualImage)}
-            className="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm sm:text-base transition"
-          >
-            {showActualImage ? "Show Full Container" : "Show Actual Image"}
-          </button>
+           {/* Toggle Button */}
+              <button
+                onClick={() => setShowActualImage(!showActualImage)}
+                className={`p-2 sm:p-3 rounded-full mt-2 transition-all flex items-center justify-center ${
+                  showActualImage ? "bg-green-500" : "bg-yellow-500 hover:bg-yellow-600"
+                }`}
+                title={showActualImage ? "Show Container-Fit" : "Show Actual Image"}
+              >
+                <PiImagesSquareDuotone className="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
         </div>
 
         {/* Search Results */}
@@ -66,7 +71,6 @@ const SearchPage = () => {
                 "
               >
                 <p><strong>Title:</strong> {item.title || "-"}</p>
-                <p><strong>Type:</strong> {item.type || "-"}</p>
                 <p><strong>Category:</strong> {item.category || "-"}</p>
                 <p><strong>User:</strong> {item.username || "-"}</p>
 

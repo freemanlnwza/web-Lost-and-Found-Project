@@ -3,30 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { MessageCircle, MapPin, Calendar, User } from "lucide-react";
 import { MdOutlineReportProblem } from "react-icons/md";
 import { IoSearchCircleSharp } from "react-icons/io5";
-
-<div className="flex-shrink-0 w-full sm:w-auto flex items-center justify-center sm:justify-end gap-2 sm:mx-4">
-  <div className="flex items-center bg-gray-800 border border-gray-700 rounded-lg px-2 focus-within:ring-2 focus-within:ring-blue-500 transition">
-    {/* 🔍 ไอคอนทางซ้าย */}
-    <IoSearchCircleSharp className="text-blue-400 text-2xl mr-2" />
-
-    {/* ช่องค้นหา */}
-    <input
-      type="text"
-      placeholder="Search by title..."
-      className="px-2 py-1.5 bg-transparent text-white text-sm focus:outline-none w-48 sm:w-56"
-      onChange={(e) => handleFilterChange(e.target.value)}
-    />
-  </div>
-</div>
+import { PiImagesSquareDuotone } from "react-icons/pi";
 
 const Lost = ({ currentUserId }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showActualImage, setShowActualImage] = useState(false);
-  const [reportingItem, setReportingItem] = useState(null); // สำหรับ popup
-  const [reportComment, setReportComment] = useState("");   // ช่องกรอก comment
-  const [submitting, setSubmitting] = useState(false); // ป้องกันส่งซ้ำ
-  const [reportError, setReportError] = useState(""); // ข้อความ error จาก backend
+  const [reportingItem, setReportingItem] = useState(null); 
+  const [reportComment, setReportComment] = useState("");  
+  const [submitting, setSubmitting] = useState(false); 
+  const [reportError, setReportError] = useState(""); 
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false); // state popup success
+
   const navigate = useNavigate();
   const textareaRef = useRef(null);
   const [filteredItems, setFilteredItems] = useState([]);
@@ -48,7 +36,6 @@ const Lost = ({ currentUserId }) => {
       setFilteredItems(result);
     }
   };
-
 
   useEffect(() => {
     let isMounted = true;
@@ -112,7 +99,6 @@ const Lost = ({ currentUserId }) => {
     setReportError("");
   };
 
-  // autofocus textarea when popup opens
   useEffect(() => {
     if (reportingItem && textareaRef.current) {
       textareaRef.current.focus();
@@ -120,7 +106,6 @@ const Lost = ({ currentUserId }) => {
   }, [reportingItem]);
 
   const submitReport = async () => {
-    // ตรวจสอบก่อนส่ง
     if (!currentUserId) {
       setReportError("กรุณาเข้าสู่ระบบเพื่อรายงานเนื้อหา");
       return;
@@ -131,15 +116,11 @@ const Lost = ({ currentUserId }) => {
     setSubmitting(true);
 
     try {
-      // สร้าง payload ให้แน่นอนว่า item_id เป็น number
       const payload = {
         item_id: Number(reportingItem.id),
         type: "item",
         comment: (reportComment || "พบสิ่งผิดปกติ").trim(),
       };
-
-      // debug console (ลบได้ใน production)
-      // console.log("Report payload:", payload);
 
       const res = await fetch("http://localhost:8000/api/report", {
         method: "POST",
@@ -149,16 +130,12 @@ const Lost = ({ currentUserId }) => {
       });
 
       if (!res.ok) {
-        // parse detail ถ้ามี
         let errText = "Report failed";
         try {
           const errJson = await res.json();
           if (errJson && errJson.detail) errText = errJson.detail;
-        } catch (e) {
-          // ignore parse error
-        }
+        } catch (e) {}
 
-        // 401 => ไม่ได้ล็อกอิน / session หมด
         if (res.status === 401) {
           setReportError("คุณยังไม่ได้ล็อกอินหรือ session หมดอายุ กรุณาล็อกอินใหม่");
         } else {
@@ -168,15 +145,13 @@ const Lost = ({ currentUserId }) => {
         throw new Error(errText);
       }
 
-      // success
-      // (คุณอาจเปลี่ยนเป็น popup success แทน alert)
-      alert("Report submitted successfully ✅");
-      setReportingItem(null); // ปิด popup
+      // แทน alert ด้วย popup
+      setShowSuccessPopup(true);
+      setReportingItem(null); 
       setReportComment("");
       setReportError("");
     } catch (error) {
       console.error("Error reporting item:", error);
-      // ถ้า setReportError ก่อนหน้าไม่ได้ตั้งค่า ก็แสดง generic
       if (!reportError) setReportError("ไม่สามารถรายงานได้ในขณะนี้ กรุณาลองใหม่");
     } finally {
       setSubmitting(false);
@@ -212,12 +187,12 @@ const Lost = ({ currentUserId }) => {
     {/* Toggle Button */}
     <button
       onClick={() => setShowActualImage(!showActualImage)}
-      className={`p-2 sm:p-3 rounded-full transition-all flex items-center justify-center ${
-        showActualImage ? "bg-white" : "bg-yellow-500 hover:bg-yellow-600"
+      className={`p-2 sm:p-3 rounded-full mt-2 transition-all flex items-center justify-center ${
+        showActualImage ? "bg-green-500" : "bg-yellow-500 hover:bg-yellow-600"
       }`}
       title={showActualImage ? "Show Container-Fit" : "Show Actual Image"}
     >
-      <img src="/public/arrow.png" alt="Toggle Image" className="h-3 w-3 sm:h-4 sm:w-4" />
+      <PiImagesSquareDuotone className="h-4 w-4 sm:h-5 sm:w-5" />
     </button>
   </div>
 
@@ -388,6 +363,22 @@ const Lost = ({ currentUserId }) => {
                 }`}
               >
                 {submitting ? "Submitting..." : "Submit Report"}
+              </button>
+            </div>
+          </div>
+        )}
+            {/* ================== Success Popup ================== */}
+        {showSuccessPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-green-600 rounded-3xl p-6 max-w-sm w-full text-center">
+              <p className="text-white font-semibold text-lg">
+                Report submitted successfully ✅
+              </p>
+              <button
+                className="mt-4 px-4 py-2 bg-white text-green-700 font-semibold rounded-lg hover:bg-gray-200 transition"
+                onClick={() => setShowSuccessPopup(false)}
+              >
+                Close
               </button>
             </div>
           </div>
