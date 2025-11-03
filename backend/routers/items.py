@@ -119,7 +119,7 @@ async def upload_item(
         image_filename=item.image_filename,
         user_id=item.user_id,
         username=item.user.username if item.user else None,
-        confidence_list=confs.tolist()
+         confidence_list=confs.tolist() if hasattr(confs, "tolist") else confs
     )
 
 # ============================
