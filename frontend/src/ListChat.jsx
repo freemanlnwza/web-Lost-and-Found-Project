@@ -18,7 +18,7 @@ const ListChat = () => {
   const textareaRef = useRef(null);
   const navigate = useNavigate();
   const currentUserId = JSON.parse(localStorage.getItem("user"))?.id;
-
+  const [reportSuccess, setReportSuccess] = useState(false);
   // Fetch chats
   useEffect(() => {
     let isMounted = true;
@@ -122,56 +122,51 @@ useEffect(() => {
     setReportError("");
   };
 
-  const submitReport = async () => {
-    if (!currentUserId || !reportingChat) return;
-    setSubmitting(true);
-    setReportError("");
+ // ====================
+// submitReport function
+// ====================
+const submitReport = async () => {
+  if (!currentUserId || !reportingChat) return;
+  setSubmitting(true);
+  setReportError("");
 
-    try {
-      if (!reportingChat.item_id) {
-        setReportError("Cannot report this chat because item_id is missing.");
-        setSubmitting(false);
-        return;
-      }
+  try {
+    const payload = {
+      item_id: null,
+      chat_id: reportingChat.chat_id ? Number(reportingChat.chat_id) : null,
+      type: "chat",
+      comment: (reportComment || "An issue has been detected").trim(),
+    };
 
-      const payload = {
-        item_id: reportingChat.item_id ? Number(reportingChat.item_id) : null,
-        chat_id: reportingChat.chat_id ? Number(reportingChat.chat_id) : null,
-        type: "chat",
-        comment: (reportComment || "พบสิ่งผิดปกติ").trim(),
-      };
+    const res = await fetch("http://localhost:8000/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
 
-      const res = await fetch("http://localhost:8000/api/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        let errText = "Report failed";
-        try {
-          const errJson = await res.json();
-          if (errJson && errJson.detail) errText = errJson.detail;
-        } catch {}
-        if (res.status === 401) {
-          setReportError("คุณยังไม่ได้ล็อกอินหรือ session หมดอายุ กรุณาล็อกอินใหม่");
-        } else {
-          setReportError(errText);
-        }
-        throw new Error(errText);
-      }
-
-      alert("Report submitted successfully ✅");
-      setReportingChat(null);
-      setReportComment("");
-    } catch (err) {
-      console.error(err);
-      if (!reportError) setReportError("ไม่สามารถรายงานได้ กรุณาลองใหม่");
-    } finally {
-      setSubmitting(false);
+    if (!res.ok) {
+      let errText = "Report failed";
+      try {
+        const errJson = await res.json();
+        if (errJson && errJson.detail) errText = errJson.detail;
+      } catch {}
+      setReportError(errText);
+      throw new Error(errText);
     }
-  };
+
+    // แทน alert ให้เป็น popup
+    setReportingChat(null);
+    setReportComment("");
+    setReportSuccess(true); // ✅ แสดง popup
+  } catch (err) {
+    console.error(err);
+    if (!reportError) setReportError("Report failed. Please try again");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   const handleDeleteItem = async (item) => {
     try {
@@ -428,6 +423,29 @@ useEffect(() => {
           </div>
         </div>
       )}
+
+            {/* Report Success Popup */}
+      {reportSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-gray-900 rounded-3xl p-6 w-full max-w-sm relative">
+            <button
+              onClick={() => setReportSuccess(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl font-bold"
+            >
+              &times;
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-white">Report Submitted ✅</h2>
+            <p className="text-gray-300 mb-4">Your report has been successfully submitted.</p>
+            <button
+              onClick={() => setReportSuccess(false)}
+              className="w-full py-2 rounded-lg bg-yellow-500 text-black font-semibold hover:bg-yellow-600 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

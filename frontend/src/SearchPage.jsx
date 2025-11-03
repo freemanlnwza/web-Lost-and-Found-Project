@@ -24,24 +24,22 @@ const SearchPage = () => {
           border border-gray-700
         "
       >
-        {/* Header */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-center mt-5">
-          🔍 Search Results
-        </h1>
+       {/* Header + Toggle */}
+<div className="flex items-center justify-between mt-5 px-4 sm:px-0">
+  <h1 className="text-2xl sm:text-3xl font-bold">
+    🔍 Search Results
+  </h1>
 
-        {/* Toggle Button */}
-        <div className="flex justify-end">
-           {/* Toggle Button */}
-              <button
-                onClick={() => setShowActualImage(!showActualImage)}
-                className={`p-2 sm:p-3 rounded-full mt-2 transition-all flex items-center justify-center ${
-                  showActualImage ? "bg-green-500" : "bg-yellow-500 hover:bg-yellow-600"
-                }`}
-                title={showActualImage ? "Show Container-Fit" : "Show Actual Image"}
-              >
-                <PiImagesSquareDuotone className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-        </div>
+  <button
+    onClick={() => setShowActualImage(!showActualImage)}
+    className={`p-2 mt-2 sm:p-3 rounded-full transition-all flex items-center justify-center ${
+      showActualImage ? "bg-green-500" : "bg-yellow-500 hover:bg-yellow-600"
+    }`}
+    title={showActualImage ? "Show Container-Fit" : "Show Actual Image"}
+  >
+    <PiImagesSquareDuotone className="h-4 w-4 sm:h-5 sm:w-5" />
+  </button>
+</div>
 
         {/* Search Results */}
         {foundItems.length === 0 ? (
@@ -118,7 +116,7 @@ const SearchPage = () => {
               transition
             "
           >
-            ← Back
+             Back
           </button>
         </div>
       </div>
