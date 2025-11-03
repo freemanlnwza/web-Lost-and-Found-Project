@@ -54,8 +54,15 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
 def get_user_by_session_token(db: Session, session_token: str) -> Optional[User]:
     session = db.query(models.Session).filter(models.Session.session_token == session_token).first()
     if session:
+        # ตรวจสอบ session หมดอายุ
+        if session.expires_at is not None and session.expires_at < datetime.utcnow():
+            # ลบ session หมดอายุออก
+            db.delete(session)
+            db.commit()
+            return None
         return db.query(User).filter(User.id == session.user_id).first()
     return None
+
 
 
 # ===========================
@@ -228,8 +235,9 @@ def get_current_user(session_token: Optional[str] = Cookie(None), db: Session = 
         raise HTTPException(status_code=401, detail="ต้อง login ก่อน")
     user = get_user_by_session_token(db, session_token)
     if not user:
-        raise HTTPException(status_code=401, detail="Session ไม่ถูกต้อง")
+        raise HTTPException(status_code=401, detail="Session ไม่ถูกต้องหรือหมดอายุ")
     return user
+
 
 
 def get_current_admin(request: Request, db: Session = Depends(get_db)):

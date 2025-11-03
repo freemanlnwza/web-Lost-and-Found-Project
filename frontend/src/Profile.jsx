@@ -31,15 +31,19 @@ const Profile = () => {
   }
 
   return (
-    <main className="flex-grow flex items-center justify-center pt-64">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
+    <main className="flex-grow flex items-center justify-center py-56 ">
+      <div className="w-full max-w-md bg-gray-800 rounded-2xl shadow-lg p-8">
+        <h1 className="text-3xl font-bold text-center mb-6 text-white">
           Account Profile
         </h1>
         <div className="space-y-4">
           <p>
-            <span className="font-semibold text-black">Username: </span>
+            <span className="font-semibold text-white">Username: </span>
             {user.username}
+          </p>
+          <p>
+            <span className="font-semibold text-white">Email: </span>
+            {user.email}
           </p>
         </div>
         <button

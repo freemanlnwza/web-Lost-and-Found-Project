@@ -25,9 +25,11 @@ class UserOut(BaseModel):
     role: str
     is_verified: bool = False
     session_token: Optional[str] = None  # สำหรับ login response (เซ็ตใน HttpOnly cookie)
+    session_expires_at: Optional[datetime] = None  # เพิ่ม field สำหรับวันหมดอายุ session
 
     class Config:
         from_attributes = True
+
 
 class UserVerifyOTP(BaseModel):
     email: str

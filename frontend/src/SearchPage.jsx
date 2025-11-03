@@ -9,39 +9,61 @@ const SearchPage = () => {
   const foundItems = location.state?.foundItems ?? [];
 
   return (
-        <main className="flex items-center justify-center min-h-screen text-white p-6">
+    <main className="flex items-center justify-center min-h-screen bg-gray-900 text-white px-4 py-8">
       <div
         className="
-          w-full max-w-6xl
-          bg-gray-800 bg-opacity-90
-          backdrop-blur-md
-          rounded-2xl
-          shadow-2xl
-          p-6 space-y-6
-          border-2 border-yellow-500
-          mx-auto
+          w-full 
+          max-w-6xl 
+          bg-gray-800/90 
+          backdrop-blur-md 
+          rounded-2xl 
+          shadow-2xl 
+          p-6 
+          space-y-6 
+          border border-gray-700
         "
       >
-        <h1 className="text-2xl font-bold text-center">🔍 Search Results</h1>
+        {/* Header */}
+        <h1 className="text-2xl sm:text-3xl font-bold text-center mt-5">
+          🔍 Search Results
+        </h1>
 
-        {/* แถวบน: ปุ่ม Toggle */}
+        {/* Toggle Button */}
         <div className="flex justify-end">
           <button
             onClick={() => setShowActualImage(!showActualImage)}
-            className="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
+            className="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm sm:text-base transition"
           >
             {showActualImage ? "Show Full Container" : "Show Actual Image"}
           </button>
         </div>
 
+        {/* Search Results */}
         {foundItems.length === 0 ? (
           <p className="text-center text-gray-400">No matching items found.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div
+            className="
+              grid 
+              grid-cols-1 
+              sm:grid-cols-2 
+              lg:grid-cols-3 
+              gap-6
+            "
+          >
             {foundItems.map((item, index) => (
               <div
                 key={item.id || index}
-                className="bg-gray-700 rounded-lg p-4 border border-gray-600 flex flex-col"
+                className="
+                  bg-gray-700 
+                  rounded-lg 
+                  p-4 
+                  border 
+                  border-gray-600 
+                  flex 
+                  flex-col 
+                  text-sm sm:text-base
+                "
               >
                 <p><strong>Title:</strong> {item.title || "-"}</p>
                 <p><strong>Type:</strong> {item.type || "-"}</p>
@@ -54,9 +76,9 @@ const SearchPage = () => {
                   </p>
                 )}
 
-                {/* แสดงภาพตาม toggle */}
-                {item.original_image_data || item.boxed_image_data ? (
-                  <div className="mt-2 w-full aspect-square relative overflow-hidden rounded-lg bg-gray-900">
+                {/* Image */}
+                {(item.original_image_data || item.boxed_image_data) && (
+                  <div className="mt-3 w-full aspect-square relative overflow-hidden rounded-lg bg-gray-900">
                     <img
                       src={
                         showActualImage
@@ -71,24 +93,32 @@ const SearchPage = () => {
                       }
                     />
                   </div>
-                ) : null}
+                )}
               </div>
             ))}
           </div>
         )}
 
-        {/* แถวล่าง: ปุ่ม Back */}
+        {/* Back Button */}
         <div className="flex justify-center mt-6">
           <button
             onClick={() => navigate(-1)}
-            className="py-2 px-6 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
+            className="
+              py-2 
+              px-6 
+              bg-blue-600 
+              hover:bg-blue-700 
+              rounded-lg 
+              font-semibold 
+              text-sm sm:text-base 
+              transition
+            "
           >
             ← Back
           </button>
         </div>
       </div>
     </main>
-
   );
 };
 
