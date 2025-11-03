@@ -107,7 +107,7 @@ const Lost = ({ currentUserId }) => {
 
   const submitReport = async () => {
     if (!currentUserId) {
-      setReportError("กรุณาเข้าสู่ระบบเพื่อรายงานเนื้อหา");
+      setReportError("Please log in to report this content");
       return;
     }
     if (!reportingItem) return;
@@ -119,7 +119,7 @@ const Lost = ({ currentUserId }) => {
       const payload = {
         item_id: Number(reportingItem.id),
         type: "item",
-        comment: (reportComment || "พบสิ่งผิดปกติ").trim(),
+        comment: (reportComment || "An issue has been detected").trim(),
       };
 
       const res = await fetch("http://localhost:8000/api/report", {
@@ -137,7 +137,7 @@ const Lost = ({ currentUserId }) => {
         } catch (e) {}
 
         if (res.status === 401) {
-          setReportError("คุณยังไม่ได้ล็อกอินหรือ session หมดอายุ กรุณาล็อกอินใหม่");
+          setReportError("Please log in again. Your session has expired.");
         } else {
           setReportError(errText);
         }
@@ -152,7 +152,7 @@ const Lost = ({ currentUserId }) => {
       setReportError("");
     } catch (error) {
       console.error("Error reporting item:", error);
-      if (!reportError) setReportError("ไม่สามารถรายงานได้ในขณะนี้ กรุณาลองใหม่");
+      if (!reportError) setReportError("Report failed. Please try again");
     } finally {
       setSubmitting(false);
     }

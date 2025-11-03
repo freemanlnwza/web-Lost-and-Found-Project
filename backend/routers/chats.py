@@ -16,7 +16,7 @@ def get_or_create_chat(
     chat = crud.get_or_create_chat(db, current_user.id, req.user2_id, req.item_id)
     
     if current_user.id not in [chat.user1_id, chat.user2_id]:
-        raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์เข้าถึงห้องนี้")
+        raise HTTPException(status_code=403, detail="You do not have access to this room")
     
     item_image = encode_image(chat.item.image_data, chat.item.image_content_type) if chat.item else None
     return {
@@ -59,10 +59,10 @@ def get_chat_messages(
 ):
     chat = db.query(models.Chat).filter(models.Chat.id == chat_id).first()
     if not chat:
-        raise HTTPException(status_code=404, detail="ไม่พบห้องแชทนี้")
+        raise HTTPException(status_code=404, detail="Chat room not found")
     
     if current_user.id not in [chat.user1_id, chat.user2_id]:
-        raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์เข้าถึงห้องนี้")
+        raise HTTPException(status_code=403, detail="You do not have access to this room")
     
     messages = crud.get_messages_by_chat(db, chat_id)
 
@@ -95,9 +95,9 @@ async def send_message(
 ):
     chat = db.query(models.Chat).filter(models.Chat.id == chat_id).first()
     if not chat:
-        raise HTTPException(status_code=404, detail="ไม่พบห้องแชทนี้")
+        raise HTTPException(status_code=404, detail="Chat room not found")
     if current_user.id not in [chat.user1_id, chat.user2_id]:
-        raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์ในห้องนี้")
+        raise HTTPException(status_code=403, detail="You do not have access to this room")
 
     image_data = None
     image_content_type = None
@@ -138,10 +138,10 @@ def delete_message(
 ):
     message = db.query(models.Message).filter(models.Message.id == message_id).first()
     if not message:
-        raise HTTPException(status_code=404, detail="ไม่พบข้อความนี้")
+        raise HTTPException(status_code=404, detail="Message not found")
     if message.sender_id != current_user.id:
-        raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์ลบข้อความนี้")
+        raise HTTPException(status_code=403, detail="You are not allowed to delete this message")
 
     db.delete(message)
     db.commit()
-    return {"message": "ลบข้อความสำเร็จ"}
+    return {"message": "Delete successful"}
