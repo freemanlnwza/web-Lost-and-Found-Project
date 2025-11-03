@@ -132,7 +132,7 @@ const Register = () => {
 
   return (
     <main className="flex items-center justify-center h-full pt-14 px-4 sm:px-6 lg:px-8 bg-gray-900">
-      <div className="w-full max-w-md sm:max-w-sm md:max-w-md lg:max-w-lg bg-gray-800 bg-opacity-90 backdrop-blur-md rounded-2xl shadow-2xl p-6 sm:p-8 md:p-10 space-y-6 sm:space-y-8 text-white border-2 border-gray-900 mx-auto">
+  <div className="w-full max-w-sm sm:max-w-sm md:max-w-sm lg:max-w-sm bg-gray-800 bg-opacity-90 backdrop-blur-md rounded-2xl shadow-2xl p-4 sm:p-6 md:p-6 space-y-4 sm:space-y-5 text-white border border-gray-900 mx-auto">
         <div className="text-center">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Register</h1>
         </div>
@@ -203,6 +203,19 @@ const Register = () => {
           >
             {loading ? "Sending OTP..." : "Send OTP"}
           </button>
+         {/* ================= Login Link ================= */}
+          <div className="text-center mt-3">
+            <p className="text-sm text-gray-300">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                className="text-blue-400 hover:underline "
+              >
+                Login
+              </button>
+            </p>
+          </div>
         </form>
       </div>
 
