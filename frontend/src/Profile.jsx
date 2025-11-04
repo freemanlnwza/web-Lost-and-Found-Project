@@ -74,12 +74,20 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">My Posts</h1>
-          <p className="text-gray-400">Manage your lost & found items</p>
+    <main className="flex-grow flex items-center justify-center py-56 ">
+      <div className="w-full max-w-md bg-gray-800 rounded-2xl shadow-lg p-8">
+        <h1 className="text-3xl font-bold text-center mb-6 text-white">
+          Account Profile
+        </h1>
+        <div className="space-y-4">
+          <p>
+            <span className="font-semibold text-white">Username: </span>
+            {user.username}
+          </p>
+          <p>
+            <span className="font-semibold text-white">Email: </span>
+            {user.email}
+          </p>
         </div>
 
         {/* Posts Grid */}

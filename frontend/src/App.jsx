@@ -1,4 +1,12 @@
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  useNavigate,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
 import { useState, useEffect } from "react";
 import UploadPage from "./UploadPage.jsx";
 import CameraPage from "./CameraPage.jsx";
@@ -9,76 +17,115 @@ import Register from "./Register.jsx";
 import Profile from "./Profile.jsx";
 import SearchPage from "./SearchPage.jsx";
 import GuideBook from "./GuideBook.jsx";
-import AdminPage from "./adminpage.jsx";
+import AdminPage from "./AdminPage.jsx";
 import ListChat from "./ListChat.jsx";
+import Otp from "./Otp.jsx";
+import ResetPage from "./Reset.jsx";
+import ResetOTPPage from "./ResetOTP.jsx";
+import ResetPasswordPage from "./ResetPassword.jsx";
+import { useCheckSession } from "./useCheckSession.jsx";
 
+// ✅ Wrapper สำหรับ Router
 function AppWrapper() {
   return (
-    <Router> {/* สร้าง Router รอบ App */}
-      <App /> {/* แสดง App component ภายใน Router */}
+    <Router>
+      <Routes>
+        {/* ✅ หน้า AdminPage แยกออก ไม่ใช้ layout ของ App */}
+        <Route path="/adminpage" element={<AdminPage />} />
+
+        {/* ✅ หน้าอื่น ๆ ใช้ layout ปกติ */}
+        <Route path="/*" element={<App />} />
+      </Routes>
     </Router>
   );
 }
 
 function App() {
-  // state เก็บข้อมูลผู้ใช้งานปัจจุบันจาก localStorage
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem("user"); // อ่าน user จาก localStorage
-    return saved ? JSON.parse(saved) : null; // แปลง JSON หรือ null ถ้าไม่มี
+    const saved = localStorage.getItem("user");
+    return saved ? JSON.parse(saved) : null;
   });
 
-  const [isAuthenticated, setIsAuthenticated] = useState(!!currentUser); // เช็คว่าผู้ใช้ล็อกอินแล้วหรือไม่
-  const [isOpen, setIsOpen] = useState(false); // state สำหรับเมนู mobile
-  const hideHeaderRoutes = ["/camera","adminpage"]; // เส้นทางที่ซ่อน header
-  const location = useLocation(); // ใช้เพื่อดึง path ปัจจุบัน
-  const shouldHideHeader = hideHeaderRoutes.includes(location.pathname); // เช็คว่าต้องซ่อน header หรือไม่
+  const [isAuthenticated, setIsAuthenticated] = useState(!!currentUser);
+  const [isOpen, setIsOpen] = useState(false);
+  const hideHeaderRoutes = ["/camera"];
+  const location = useLocation();
+  const shouldHideHeader = hideHeaderRoutes.includes(location.pathname);
+  const { checkSession } = useCheckSession();
 
-  // useEffect สำหรับโหลด user ใหม่เมื่อ isAuthenticated เปลี่ยน
+  // ✅ ตรวจสอบ session แต่ไม่บังคับ redirect ถ้าไม่มี session
+  useEffect(() => {
+    const verifySession = async () => {
+      const user = await checkSession();
+      if (user) {
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        localStorage.setItem("user", JSON.stringify(user));
+      } else {
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+        localStorage.removeItem("user");
+      }
+    };
+    verifySession();
+  }, [location.pathname]);
+
   useEffect(() => {
     const saved = localStorage.getItem("user");
     if (saved) setCurrentUser(JSON.parse(saved));
   }, [isAuthenticated]);
 
   return (
-    <div className="min-h-screen flex flex-col font-sans text-gray-100"> {/* container หลักของ App */}
+    <div className="min-h-screen flex flex-col font-sans text-gray-100">
       {/* Navbar */}
-      {!shouldHideHeader && ( // แสดง navbar ถ้า path ไม่อยู่ใน hideHeaderRoutes
+      {!shouldHideHeader && (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-[#111827] border-b border-gray-800 shadow-md text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               {/* Logo */}
               <div className="flex items-center space-x-2">
                 <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shadow-lg border border-black/40">
-                  <span className="text-black font-bold text-sm">L&F</span> {/* โลโก้ย่อ */}
+                  <span className="text-black font-bold text-sm">L&F</span>
                 </div>
-                <span className="text-xl font-extrabold tracking-wide text-white">Lost & Found</span> {/* ชื่อเว็บไซต์ */}
+                <span className="text-xl font-extrabold tracking-wide text-white">
+                  Lost & Found
+                </span>
               </div>
 
               {/* Desktop Menu */}
-              <div className="hidden md:flex space-x-6"> {/* เมนูสำหรับ desktop */}
+              <div className="hidden md:flex space-x-6">
                 <NavLink to="/" label="Home" />
                 <NavLink to="/lost" label="Lost" />
-
-                {!isAuthenticated ? ( // ถ้าไม่ล็อกอิน
+                {!isAuthenticated ? (
                   <>
                     <NavLink to="/guidebook" label="Guidebook" />
                     <NavLink to="/login" label="Login" />
                     <NavLink to="/register" label="Register" />
                   </>
-                ) : ( // ถ้าล็อกอินแล้ว
+                ) : (
                   <>
                     <NavLink to="/chats" label="Chats" />
                     <NavLink to="/profile" label="Profile" />
                     <NavLink to="/guidebook" label="Guidebook" />
-                    <LogoutButton setIsAuthenticated={setIsAuthenticated} setCurrentUser={setCurrentUser} /> {/* ปุ่ม logout */}
+                    <LogoutButton
+                      setIsAuthenticated={setIsAuthenticated}
+                      setCurrentUser={setCurrentUser}
+                    />
                   </>
                 )}
               </div>
 
               {/* Mobile Menu Button */}
-              <div className="md:hidden">
-                <button onClick={() => setIsOpen(!isOpen)} className="text-yellow-400 focus:outline-none">
-                  {isOpen ? <span className="text-2xl">&#x2715;</span> : <span className="text-2xl">&#9776;</span>} {/* icon เปิด/ปิด menu */}
+              <div className="md:hidden relative z-80">
+                <button
+                  onClick={() => setIsOpen(!isOpen)}
+                  className="text-yellow-400 focus:outline-none relative z-80"
+                >
+                  {isOpen ? (
+                    <span className="text-2xl">&#x2715;</span>
+                  ) : (
+                    <span className="text-2xl">&#9776;</span>
+                  )}
                 </button>
               </div>
             </div>
@@ -86,22 +133,48 @@ function App() {
 
           {/* Mobile Menu */}
           {isOpen && (
-            <div className="md:hidden bg-[#1a1a1a] border-t border-gray-800 px-4 py-3 space-y-2">
+            <div className="md:hidden bg-[#1a1a1a] border-t border-gray-800 px-4 py-3 space-y-2 relative z-40 transition-all duration-300">
               <NavLink to="/" label="Home" onClick={() => setIsOpen(false)} />
               <NavLink to="/lost" label="Lost" onClick={() => setIsOpen(false)} />
-
               {!isAuthenticated ? (
                 <>
-                  <NavLink to="/guidebook" label="Guidebook" onClick={() => setIsOpen(false)} />
-                  <NavLink to="/login" label="Login" onClick={() => setIsOpen(false)} />
-                  <NavLink to="/register" label="Register" onClick={() => setIsOpen(false)} />
+                  <NavLink
+                    to="/guidebook"
+                    label="Guidebook"
+                    onClick={() => setIsOpen(false)}
+                  />
+                  <NavLink
+                    to="/login"
+                    label="Login"
+                    onClick={() => setIsOpen(false)}
+                  />
+                  <NavLink
+                    to="/register"
+                    label="Register"
+                    onClick={() => setIsOpen(false)}
+                  />
                 </>
               ) : (
                 <>
-                  <NavLink to="/chats" label="Chats" onClick={() => setIsOpen(false)} />
-                  <NavLink to="/profile" label="Profile" onClick={() => setIsOpen(false)} />
-                  <NavLink to="/guidebook" label="Guidebook" onClick={() => setIsOpen(false)} />
-                  <LogoutButton setIsAuthenticated={setIsAuthenticated} setCurrentUser={setCurrentUser} />
+                  <NavLink
+                    to="/chats"
+                    label="Chats"
+                    onClick={() => setIsOpen(false)}
+                  />
+                  <NavLink
+                    to="/profile"
+                    label="Profile"
+                    onClick={() => setIsOpen(false)}
+                  />
+                  <NavLink
+                    to="/guidebook"
+                    label="Guidebook"
+                    onClick={() => setIsOpen(false)}
+                  />
+                  <LogoutButton
+                    setIsAuthenticated={setIsAuthenticated}
+                    setCurrentUser={setCurrentUser}
+                  />
                 </>
               )}
             </div>
@@ -111,28 +184,60 @@ function App() {
 
       {/* Content */}
       <main
-        className={`flex-1 flex ${!shouldHideHeader ? "pt-14 bg-gradient-to-br from-gray-100 via-gray-200 to-gray-100" : "bg-black"} justify-center items-center`}
+        className={`flex-1 flex ${
+          !shouldHideHeader ? " bg-[#111827]" : "bg-black"
+        }`}
       >
-        {shouldHideHeader ? ( // ถ้า path ต้องซ่อน header
+        {shouldHideHeader ? (
           <Routes>
             <Route path="/camera" element={<CameraPage />} />
-            <Route path="/adminpage" element={<AdminPage />} />
           </Routes>
-        ) : ( // path ปกติ
-          <div className="w-full max-w-6xl text-black py-10">
+        ) : (
+          <div className="w-full text-white">
             <Routes>
+              {/* ✅ ทุกคนเข้าถึงได้ */}
               <Route path="/" element={<UploadPage />} />
               <Route path="/lost" element={<Lost currentUserId={currentUser?.id} />} />
+              <Route path="/guidebook" element={<GuideBook />} />
+              <Route path="/searchItem" element={<SearchPage />} />
               <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/camera" element={<CameraPage />} />
-              <Route path="/searchItem" element={<SearchPage />} />
-              <Route path="/chat/:chatId" element={<ChatPage currentUserId={currentUser?.id} />} />
-              <Route path="/guidebook" element={<GuideBook />} />
-              <Route path="/adminpage" element={<AdminPage />} />
-              <Route path="/chats" element={<ListChat currentUserId={currentUser?.id} />} />
+              <Route path="/otp" element={<Otp />} />
+              <Route path="/reset" element={<ResetPage />} />
+              <Route path="/reset-otp" element={<ResetOTPPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
 
+              {/* 🔒 หน้าที่ต้องล็อกอินก่อนถึงจะเข้าได้ */}
+              <Route
+                path="/profile"
+                element={
+                  isAuthenticated ? (
+                    <Profile />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/chats"
+                element={
+                  isAuthenticated ? (
+                    <ListChat currentUserId={currentUser?.id} />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/chat/:chatId"
+                element={
+                  isAuthenticated ? (
+                    <ChatPage currentUserId={currentUser?.id} />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
             </Routes>
           </div>
         )}
@@ -144,11 +249,15 @@ function App() {
           <div className="max-w-6xl mx-auto px-4 text-center py-3">
             <div className="flex items-center justify-center space-x-2 mb-1">
               <div className="w-7 h-7 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shadow-md border border-black/40">
-                <span className="text-black font-bold text-xs">L&F</span> {/* โลโก้ footer */}
+                <span className="text-black font-bold text-xs">L&F</span>
               </div>
-              <span className="text-base font-extrabold text-white">Lost & Found</span> {/* ชื่อเว็บไซต์ footer */}
+              <span className="text-base font-extrabold text-white">
+                Lost & Found
+              </span>
             </div>
-            <p className="text-gray-500 text-sm">&copy; 2025 Lost & Found. All Rights Reserved.</p> {/* ข้อความลิขสิทธิ์ */}
+            <p className="text-gray-500 text-sm">
+              &copy; 2025 Lost & Found. All Rights Reserved.
+            </p>
           </div>
         </footer>
       )}
@@ -156,30 +265,41 @@ function App() {
   );
 }
 
-// NavLink component สำหรับลิงก์ navigation
+// NavLink component
 const NavLink = ({ to, label, onClick }) => (
   <Link
-    to={to} // path ที่ต้องการไป
-    onClick={onClick} // ฟังก์ชันเมื่อคลิก (ใช้ปิด mobile menu)
+    to={to}
+    onClick={onClick}
     className="block md:inline text-white font-medium px-3 py-2 hover:text-yellow-400 hover:underline underline-offset-4 transition"
   >
-    {label} {/* แสดงชื่อเมนู */}
+    {label}
   </Link>
 );
 
 // Logout button component
 const LogoutButton = ({ setIsAuthenticated, setCurrentUser }) => {
-  const navigate = useNavigate(); // ใช้ navigate เปลี่ยน path หลัง logout
-  const handleLogout = () => {
-    localStorage.clear(); // ล้าง localStorage
-    sessionStorage.clear(); // ล้าง sessionStorage
-    setIsAuthenticated(false); // อัปเดต state
-    setCurrentUser(null); // ล้างข้อมูลผู้ใช้
-    navigate("/login", { replace: true }); // เปลี่ยนไปหน้า login
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await fetch("http://localhost:8000/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Logout API error:", error);
+    }
+
+    localStorage.clear();
+    sessionStorage.clear();
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    navigate("/login", { replace: true });
   };
+
   return (
     <button
-      onClick={handleLogout} // เมื่อคลิก logout
+      onClick={handleLogout}
       className="block md:inline text-white font-medium px-3 py-2 hover:text-red-400 hover:underline underline-offset-4 transition"
     >
       Logout
@@ -187,4 +307,4 @@ const LogoutButton = ({ setIsAuthenticated, setCurrentUser }) => {
   );
 };
 
-export default AppWrapper; // ส่งออก AppWrapper เป็น default
+export default AppWrapper;

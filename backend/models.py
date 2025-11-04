@@ -1,8 +1,16 @@
 from database import Base
-from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, DateTime, func, Text
+from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, DateTime, func, Text, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from pgvector.sqlalchemy import Vector
+
+class Session(Base):
+    __tablename__ = "sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    session_token = Column(String, unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)  # ✅ เพิ่มอายุ session
 
 # ======================
 # User Model
@@ -10,21 +18,42 @@ from pgvector.sqlalchemy import Vector
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)  # ID ของผู้ใช้
-    username = Column(String, unique=True, nullable=False)  # ชื่อผู้ใช้ ต้องไม่ซ้ำ
-    password = Column(String, nullable=False)  # รหัสผ่านที่เข้ารหัสแล้ว
-    role = Column(String(20), default="user")  # สิทธิ์ของผู้ใช้ เช่น user, admin
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
+    email = Column(String(100), unique=True, index=True, nullable=False)
+    role = Column(String(20), default="user")
+    is_verified = Column(Boolean, default=True)  # 1=verified, 0=unverified (ใช้สำหรับ safety)
 
-    items = relationship("Item", back_populates="user", cascade="all, delete")  # รายการไอเท็มของผู้ใช้
-
-    # ข้อความที่ผู้ใช้ส่ง
+    items = relationship("Item", back_populates="user", cascade="all, delete")
     sent_messages = relationship("Message", back_populates="sender", cascade="all, delete")
-    # แชทที่ผู้ใช้เป็น user1
     chats_as_user1 = relationship("Chat", foreign_keys="Chat.user1_id", back_populates="user1", cascade="all, delete")
-    # แชทที่ผู้ใช้เป็น user2
     chats_as_user2 = relationship("Chat", foreign_keys="Chat.user2_id", back_populates="user2", cascade="all, delete")
-    # บันทึกการทำงานของ admin
     admin_logs = relationship("AdminLog", back_populates="admin")
+
+# ======================
+# TempUser Model (ใหม่)
+# ======================
+class TempUser(Base):
+    __tablename__ = "temp_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, nullable=False)
+    email = Column(String(100), unique=True, index=True, nullable=False)
+    password = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+# ======================
+# Email OTP Model
+# ======================
+class EmailOTP(Base):
+    __tablename__ = "email_otps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, nullable=False)
+    otp_hash = Column(String, nullable=False)   # เพิ่มคอลัมน์นี้
+    expires_at = Column(DateTime, nullable=False)
+    attempts = Column(Integer, default=0)
 
 
 # ======================
@@ -45,11 +74,12 @@ class Item(Base):
 
     text_embedding = Column(Vector(512), nullable=True)  # embedding ของข้อความ
     image_embedding = Column(Vector(512), nullable=True)  # embedding ของภาพ
+    original_image_data = Column(LargeBinary, nullable=True)
 
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # ID ผู้โพสต์
     user = relationship("User", back_populates="items")  # ความสัมพันธ์ไปยังผู้ใช้
 
-
+    
 # ======================
 # Chat Model
 # ======================
@@ -78,6 +108,10 @@ class Message(Base):
     chat_id = Column(Integer, ForeignKey("chats.id", ondelete="CASCADE"))  # ID ห้องแชท
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # ID ผู้ส่ง
     message = Column(Text, nullable=False)  # ข้อความ
+    image_data = Column(LargeBinary, nullable=True)
+    image_content_type = Column(String(100), nullable=True)
+    image_filename = Column(String(255), nullable=True)
+
     created_at = Column(DateTime(timezone=False), server_default=func.now())  # เวลาสร้าง
 
     chat = relationship("Chat", back_populates="messages")  # ความสัมพันธ์ไปยัง chat
@@ -94,6 +128,48 @@ class AdminLog(Base):
     admin_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # ID admin ที่ทำ action
     admin_username = Column(String(100), nullable=False)  # username ของ admin
     action = Column(Text, nullable=False)  # รายละเอียด action
+    action_type = Column(String(50), nullable=True)  # ✅ เพิ่ม field ใหม่
     timestamp = Column(DateTime(timezone=False), server_default=func.now())  # เวลาที่ทำ action
     
     admin = relationship("User", back_populates="admin_logs")  # ความสัมพันธ์ไปยังผู้ดูแล
+
+# ======================
+# Report Model
+# ======================
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # ผู้รายงาน
+    reporter_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    reporter = relationship("User", foreign_keys=[reporter_id], passive_deletes=True)
+
+    # ผู้ถูกรายงาน
+    reported_user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    reported_user = relationship("User", foreign_keys=[reported_user_id], passive_deletes=True)
+
+    # FK สำหรับเชื่อมโยง แต่ nullable และไม่จำเป็นสำหรับ snapshot
+    item_id = Column(Integer, ForeignKey("items.id", ondelete="CASCADE"), nullable=True)
+    chat_id = Column(Integer, ForeignKey("chats.id", ondelete="CASCADE"), nullable=True)
+    item = relationship("Item", passive_deletes=True)
+    chat = relationship("Chat", passive_deletes=True)
+
+    # Snapshot ของเนื้อหาที่รายงาน
+    reported_username = Column(String, nullable=True)         # ชื่อผู้ใช้ที่ถูกรายงาน
+    reported_item_title = Column(String, nullable=True)       # ชื่อ item
+    reported_item_image = Column(Text, nullable=True)         # เก็บ base64 หรือ URL ของภาพ
+    reported_chat_preview = Column(Text, nullable=True)       # เก็บข้อความตัวอย่างจาก chat
+
+    # ประเภท report
+    type = Column(String(20), nullable=False, default="item")  # item / chat / user
+    comment = Column(Text, nullable=True)                       # comment ของ reporter
+    created_at = Column(DateTime(timezone=False), server_default=func.now())

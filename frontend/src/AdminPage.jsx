@@ -1,20 +1,60 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Users, FileText, MessageSquare, Trash2, Activity } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-
-
-const adminPage = () => {
+import { useNavigate } from "react-router-dom";
+import { HiArrowRightOnRectangle } from "react-icons/hi2";
+import { IoBanSharp } from "react-icons/io5";
+const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState([]);
   const [items, setItems] = useState([]);
-  const [messages, setMessages] = useState([]);
+  const [reports, setReports] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [isOpen, setIsOpen] = useState(false);
   const contentRef = useRef(null);
   const navigate = useNavigate();
+  const useCheckSession = (navigate, currentUser) => {
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/auth/check-session", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          console.warn("Session invalid or expired.");
+          localStorage.clear();
+          sessionStorage.clear();
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!data?.user || data.user.role !== "admin") {
+          console.warn("Unauthorized access. Admin only.");
+          localStorage.clear();
+          sessionStorage.clear();
+          navigate("/login", { replace: true });
+        }
+      } catch (err) {
+        console.error("Session check error:", err);
+        localStorage.clear();
+        sessionStorage.clear();
+        navigate("/login", { replace: true });
+      }
+    };
+
+    checkSession();
+
+    // ✅ ตรวจซ้ำทุก 1 นาที (กัน session หมดอายุ)
+    const interval = setInterval(checkSession, 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [navigate, currentUser]);
+};
 
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem("user");
@@ -23,7 +63,6 @@ const adminPage = () => {
 
   const isAuthenticated = currentUser?.role === "admin";
 
-  // Loading / auth check
   if (!currentUser) {
     return (
       <div className="flex justify-center items-center h-screen text-gray-400">
@@ -46,349 +85,429 @@ const adminPage = () => {
     );
   }
 
-  // Fetch data
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem("token") || currentUser?.id;
-
-        if (activeTab === "users") {
-          const res = await fetch("http://localhost:8000/admin/users", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!res.ok) throw new Error("Failed to fetch users");
-          setUsers(await res.json());
-        } else if (activeTab === "items") {
-          const res = await fetch("http://localhost:8000/admin/items", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!res.ok) throw new Error("Failed to fetch items");
-          setItems(await res.json());
-        } else if (activeTab === "messages") {
-          const res = await fetch("http://localhost:8000/admin/messages", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!res.ok) throw new Error("Failed to fetch messages");
-          setMessages(await res.json());
-        } else if (activeTab === "logs") {
-          const res = await fetch("http://localhost:8000/admin/logs", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!res.ok) throw new Error("Failed to fetch logs");
-          setLogs(await res.json());
-        }
-      } catch (err) {
-        console.error(err);
-        setErrorMsg(err.message || "เกิดข้อผิดพลาด");
-      } finally {
-        setLoading(false);
-        contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+ useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      let res;
+      if (activeTab === "users") {
+        res = await fetch("http://localhost:8000/admin/users", {
+          credentials: "include", // ✅ สำคัญมาก
+        });
+        if (!res.ok) throw new Error("Failed to fetch users");
+        setUsers(await res.json());
+      } else if (activeTab === "items") {
+        res = await fetch("http://localhost:8000/admin/items", {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to fetch items");
+        setItems(await res.json());
+      } else if (activeTab === "reports") {
+        res = await fetch("http://localhost:8000/admin/reports", {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to fetch reports");
+        setReports(await res.json());
+      }else if (activeTab === "logs") {
+        res = await fetch("http://localhost:8000/admin/logs", {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to fetch logs");
+        setLogs(await res.json());
       }
-    };
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message);
+    } finally {
+      setLoading(false);
+      contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+  fetchData();
+}, [activeTab]);
 
-    fetchData();
-  }, [activeTab, currentUser]);
 
-// Logout แก้ตรงนี้ไป
-const handleLogout = async () => {
-  try {
-    await fetch("http://localhost:8000/auth/logout", {
+  const handleLogout = async () => {
+    if (!currentUser) return;
+
+    try {
+      await fetch("http://localhost:8000/auth/logout", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ username: currentUser.username })
-    });
-  } catch (err) {
-    console.error("Logout failed:", err);
-  } finally {
-    localStorage.clear();
-    sessionStorage.clear();
-    setCurrentUser(null);
-    navigate("/login", { replace: true });
+      credentials: "include", // ✅ ส่ง cookie ไปด้วย
+      });
+
+      if (!res.ok) {
+        console.error("Logout failed:", await res.text());
+      } else {
+        console.log("Logout logged successfully");
+      }
+    } catch (err) {
+      console.error("Logout request error:", err);
+    } finally {
+      localStorage.clear();
+      sessionStorage.clear();
+      setCurrentUser(null);
+      navigate("/login", { replace: true });
+    }
+  };
+
+const handleMakeAdmin = async (userId) => {
+  if (!confirm("Make this user admin?")) return;
+  const res = await fetch(`http://localhost:8000/admin/users/${userId}/make-admin`, {
+    method: "PATCH",
+    credentials: "include", // ✅ ส่ง cookie ไปด้วย
+  });
+  if (res.ok) {
+    setUsers(users.map(u => (u.id === userId ? { ...u, role: "admin" } : u)));
   }
 };
 
-  // User actions
-  const handleMakeAdmin = async (userId) => {
-    if (!confirm("Are you sure you want to make this user an admin?")) return;
-    try {
-      const token = localStorage.getItem("token") || currentUser?.id;
-      const res = await fetch(`http://localhost:8000/admin/users/${userId}/make-admin`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        setUsers(users.map(u => u.id === userId ? { ...u, role: "admin" } : u));
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Failed to promote user");
+const handleRemoveAdmin = async (userId) => {
+  if (!confirm("Remove admin role?")) return;
+  const res = await fetch(`http://localhost:8000/admin/users/${userId}/remove-admin`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  if (res.ok) {
+    setUsers(users.map(u => (u.id === userId ? { ...u, role: "user" } : u)));
+  }
+};
+
+const handleDeleteUser = async (userId) => {
+  if (!confirm("Delete this user?")) return;
+  const res = await fetch(`http://localhost:8000/admin/users/${userId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (res.ok) {
+    setUsers(users.filter(u => u.id !== userId));
+  }
+};
+
+const handleDeleteItem = async (itemId) => {
+  if (!confirm("Delete this item?")) return;
+  const res = await fetch(`http://localhost:8000/admin/items/${itemId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (res.ok) {
+    setItems(items.filter(i => i.id !== itemId));
+  }
+};
+
+const handleDeleteReport = async (reportId) => {
+    if (!confirm("Delete this report?")) return;
+    const res = await fetch(`http://localhost:8000/admin/reports/${reportId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (res.ok) {
+      setReports(reports.filter(r => r.id !== reportId));
     }
   };
 
-  const handleRemoveAdmin = async (userId) => {
-    if (!confirm("Are you sure you want to remove admin role from this user?")) return;
-    try {
-      const token = localStorage.getItem("token") || currentUser?.id;
-      const res = await fetch(`http://localhost:8000/admin/users/${userId}/remove-admin`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        setUsers(users.map(u => u.id === userId ? { ...u, role: "user" } : u));
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Failed to remove admin role");
+
+const [totalLogs, setTotalLogs] = useState(0);
+
+useEffect(() => {
+  const fetchLogCount = async () => {
+    const token = localStorage.getItem("token") || currentUser?.id;
+    const res = await fetch("http://localhost:8000/admin/logs/count", {
+    method: "GET",
+    credentials: "include", // ✅ สำคัญ ต้อง include cookie
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setTotalLogs(data.total_logs);
     }
   };
+  fetchLogCount();
+}, [currentUser]);
 
-  const handleDeleteUser = async (userId) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-    try {
-      const token = localStorage.getItem("token") || currentUser?.id;
-      const res = await fetch(`http://localhost:8000/admin/users/${userId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setUsers(users.filter(u => u.id !== userId));
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete user");
-    }
-  };
-
-  const handleDeleteItem = async (itemId) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
-    try {
-      const token = localStorage.getItem("token") || currentUser?.id;
-      const res = await fetch(`http://localhost:8000/admin/items/${itemId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setItems(items.filter(i => i.id !== itemId));
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete item");
-    }
-  };
-
-  const handleDeleteMessage = async (messageId) => {
-    if (!confirm("Are you sure you want to delete this message?")) return;
-    try {
-      const token = localStorage.getItem("token") || currentUser?.id;
-      const res = await fetch(`http://localhost:8000/admin/messages/${messageId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setMessages(messages.filter(m => m.id !== messageId));
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete message");
-    }
-  };
-
-  // Stats
-  const stats = [
-    { label: "Total Users", value: users.length, icon: Users, color: "blue" },
-    { label: "Total Items", value: items.length, icon: FileText, color: "green" },
-    { label: "Total Messages", value: messages.length, icon: MessageSquare, color: "purple" },
-    { label: "Admin Actions", value: logs.length, icon: Activity, color: "orange" },
-  ];
+const stats = [
+  { label: "Total Users", value: users.length, icon: Users, color: "blue" },
+  { label: "Total Items", value: items.length, icon: FileText, color: "green" },
+  { label: "Admin Actions", value: totalLogs, icon: Activity, color: "orange" },
+];
 
   const colorMap = {
-    blue: "text-blue-400",
+    blue: "text-blue-500",
     green: "text-green-400",
     purple: "text-purple-400",
     orange: "text-orange-400",
   };
 
+  // ======= แยก reports ตาม type =======
+  const itemReports = reports.filter(r => r.type === "item");
+  const chatReports = reports.filter(r => r.type === "chat");
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100 flex flex-col p-4 space-y-4">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Admin Panel</h1>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 bg-red-500 rounded hover:bg-red-600"
-        >
-          Logout
-        </button>
-      </div>
+   <div className="min-h-screen bg-blue-800 text-gray-100 flex flex-col p-4 space-y-4">
+  {/* Header */}
+  <div className="flex justify-between items-center m-4">
+    <h1 className="text-4xl font-bold">Admin Panel</h1>
+    <button
+      onClick={handleLogout}
+      className="p-2 bg-red-500 rounded hover:bg-red-600 flex items-center justify-center"
+      title="Logout"
+    >
+      <HiArrowRightOnRectangle className="text-white w-14 h-10" />
+    </button>
+  </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, idx) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: idx * 0.1 }}
-            className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
-                <p className="text-3xl font-bold">{stat.value}</p>
-              </div>
-              <stat.icon className={colorMap[stat.color]} size={40} />
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex space-x-2 overflow-x-auto bg-gray-800/50 p-2 rounded-xl">
-        {[
-          { id: "users", label: "Users", icon: Users },
-          { id: "items", label: "Items", icon: FileText },
-          { id: "messages", label: "Messages", icon: MessageSquare },
-          { id: "logs", label: "Admin Logs", icon: Activity },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium whitespace-nowrap ${
-              activeTab === tab.id ? "bg-yellow-500 text-gray-900" : "bg-gray-700/50 hover:bg-gray-600/50"
-            }`}
-          >
-            <tab.icon size={18} />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
+  {/* Stats */}
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    {stats.map((stat, idx) => (
       <motion.div
-        key={activeTab}
-        ref={contentRef}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex-1 overflow-y-auto p-4 bg-gray-800/30 backdrop-blur-lg rounded-2xl border border-gray-700/50"
+        key={stat.label}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: idx * 0.1 }}
+        className="bg-white rounded-2xl text-black p-6 border border-blue-800"
       >
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto"></div>
-            <p className="mt-4 text-gray-400">Loading...</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-black text-m mb-1">{stat.label}</p>
+            <p className="text-3xl font-bold">{stat.value}</p>
           </div>
-        ) : (
-          <>
-            {activeTab === "users" && (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left py-3 px-4 text-gray-400">ID</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Username</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Role</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map(u => (
-                      <tr key={u.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
-                        <td className="py-4 px-4">{u.id}</td>
-                        <td className="py-4 px-4 font-medium">{u.username}</td>
-                        <td className="py-4 px-4">
-                          <span className={`px-3 py-1 rounded-full text-sm ${u.role === 'admin' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                            {u.role || 'user'}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 flex space-x-2">
-                          {u.role !== 'admin' ? (
-                            <>
-                              <button onClick={() => handleMakeAdmin(u.id)} className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm">Make Admin</button>
-                              <button onClick={() => handleDeleteUser(u.id)} className="text-red-400"><Trash2 size={18} /></button>
-                            </>
-                          ) : (
-                            u.id !== currentUser?.id && (
-                              <button onClick={() => handleRemoveAdmin(u.id)} className="px-3 py-1 bg-gray-500/20 text-gray-400 rounded-lg text-sm">Remove Admin</button>
-                            )
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {users.length === 0 && <p className="text-center text-gray-400 py-8">No users found</p>}
-              </div>
-            )}
-
-            {activeTab === "items" && (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left py-3 px-4 text-gray-400">ID</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Title</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Category</th>
-                      <th className="text-left py-3 px-4 text-gray-400">User ID</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map(i => (
-                      <tr key={i.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
-                        <td className="py-4 px-4">{i.id}</td>
-                        <td className="py-4 px-4 font-medium">{i.title}</td>
-                        <td className="py-4 px-4"><span className={`px-3 py-1 rounded-full text-sm ${i.category === 'Lost' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>{i.category}</span></td>
-                        <td className="py-4 px-4">{i.user_id}</td>
-                        <td className="py-4 px-4"><button onClick={() => handleDeleteItem(i.id)} className="text-red-400"><Trash2 size={18} /></button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {items.length === 0 && <p className="text-center text-gray-400 py-8">No items found</p>}
-              </div>
-            )}
-
-            {activeTab === "messages" && (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left py-3 px-4 text-gray-400">ID</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Chat ID</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Sender ID</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Message</th>
-                      <th className="text-left py-3 px-4 text-gray-400">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {messages.map(m => (
-                      <tr key={m.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
-                        <td className="py-4 px-4">{m.id}</td>
-                        <td className="py-4 px-4">{m.chat_id}</td>
-                        <td className="py-4 px-4">{m.sender_id}</td>
-                        <td className="py-4 px-4 max-w-md truncate">{m.message}</td>
-                        <td className="py-4 px-4"><button onClick={() => handleDeleteMessage(m.id)} className="text-red-400"><Trash2 size={18} /></button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {messages.length === 0 && <p className="text-center text-gray-400 py-8">No messages found</p>}
-              </div>
-            )}
-
-            {activeTab === "logs" && (
-              <div className="space-y-3">
-                {logs.map(log => (
-                  <motion.div key={log.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-gray-700/30 rounded-xl p-4 border border-gray-700 flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{log.action}</p>
-                      <p className="text-sm text-gray-400">by {log.admin_username}</p>
-                    </div>
-                    <p className="text-sm text-gray-500">{new Date(log.timestamp).toLocaleString()}</p>
-                  </motion.div>
-                ))}
-                {logs.length === 0 && <p className="text-center text-gray-400 py-8">No admin logs yet</p>}
-              </div>
-            )}
-          </>
-        )}
+          <stat.icon className={colorMap[stat.color]} size={40} />
+        </div>
       </motion.div>
+    ))}
+  </div>
 
-      {/* Error Popup */}
+ {/* Tabs */}
+<div className="flex flex-wrap sm:flex-nowrap space-x-0 sm:space-x-2 overflow-x-auto bg-white p-2 rounded-xl">
+  {[
+    { id: "users", label: "Users", icon: Users },
+    { id: "items", label: "Items", icon: FileText },
+    { id: "reports", label: "Reports", icon: MessageSquare },
+    { id: "logs", label: "Admin Logs", icon: Activity },
+  ].map(tab => (
+    <button
+      key={tab.id}
+      onClick={() => setActiveTab(tab.id)}
+      className={`flex items-center m-2 space-x-4 px-4 py-2 rounded-xl font-medium whitespace-nowrap min-w-[150px] text-center
+        ${activeTab === tab.id ? "bg-yellow-400 text-black" : "bg-blue-800 hover:bg-yellow-400"}
+      `}
+    >
+      <tab.icon size={18} />
+      <span className="truncate">{tab.label}</span>
+    </button>
+  ))}
+</div>
+
+{/* Content */}
+<motion.div
+  key={activeTab}
+  ref={contentRef}
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  className="flex-1 overflow-x-auto sm:overflow-x-visible overflow-y-auto p-4 bg-white rounded-2xl border border-blue-800"
+>
+  {loading ? (
+    <div className="text-center py-12">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto"></div>
+      <p className="mt-4 text-black">Loading...</p>
+    </div>
+  ) : (
+    <>
+      {/* Users Tab */}
+      {activeTab === "users" && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[500px] sm:min-w-full table-auto">
+            <thead>
+              <tr className="border-b border-black/40">
+                <th className="text-left py-3 px-4 text-black">ID</th>
+                <th className="text-left py-3 px-4 text-black">Username</th>
+                <th className="text-left py-3 px-4 text-black">Role</th>
+                <th className="text-left py-3 px-4 text-black">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+             {users.map(u => (
+  <tr key={u.id} className="border-b border-black/40 hover:bg-blue-600/30 text-black">
+    <td className="py-4 px-4 font-medium">{u.id}</td>
+    <td className="py-4 px-4 font-medium">{u.username}</td>
+    <td className="py-4 px-4">
+      <span className={`px-4 py-2 rounded-full text-sm ${u.role === 'admin' ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white'}`}>
+        {u.role || 'user'}
+      </span>
+    </td>
+    <td className="py-4 px-4 flex flex-wrap gap-2">
+      {u.role !== 'admin' && (
+        <button onClick={() => handleDeleteUser(u.id)} className="text-red-500">
+          <Trash2 size={18} />
+        </button>
+      )}
+    </td>
+  </tr>
+))}
+
+            </tbody>
+          </table>
+          {users.length === 0 && <p className="text-center text-black py-8">No users found</p>}
+        </div>
+      )}
+
+      {/* Items Tab */}
+      {activeTab === "items" && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px] sm:min-w-full table-auto">
+            <thead>
+              <tr className="border-b border-black/40">
+                <th className="text-left py-3 px-4 text-black">ID</th>
+                <th className="text-left py-3 px-4 text-black">Image</th>
+                <th className="text-left py-3 px-4 text-black">Title</th>
+                <th className="text-left py-3 px-4 text-black">Category</th>
+                <th className="text-left py-3 px-4 text-black">User ID</th>
+                <th className="text-left py-3 px-4 text-black">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map(i => (
+                <tr key={i.id} className="border-b border-black/40 hover:bg-blue-600/30">
+                  <td className="text-black font-medium py-4 px-4">{i.id}</td>
+                  <td className="py-4 px-4">
+                    {i.image ? (
+                      <img src={`data:image/jpeg;base64,${i.image}`} alt={i.title} className="w-16 h-16 object-cover rounded-lg border border-black/40" />
+                    ) : <span className="text-black">No image</span>}
+                  </td>
+                  <td className="text-black py-4 px-4 font-medium">{i.title}</td>
+                  <td className="py-4 px-4">
+                    <span className={`px-3 py-1 rounded-full text-sm ${i.category === "Lost" ? "bg-red-500/20 text-red-500" : "bg-green-500 text-white"}`}>
+                      {i.category}
+                    </span>
+                  </td>
+                  <td className="text-black font-medium py-4 px-4">{i.user_id}</td>
+                  <td className="py-10 px-4 flex flex-wrap gap-2">
+                    <button onClick={() => handleDeleteItem(i.id)} className="text-red-400"><Trash2 size={18} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {items.length === 0 && <p className="text-center text-black py-8">No items found</p>}
+        </div>
+      )}
+
+    {/* Reports Tab */}
+{activeTab === "reports" && (
+  <div className="space-y-6 p-2">
+    {["item", "chat"].map(type => {
+      const filteredReports = reports
+        .filter(r => r.type === type)
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      if (filteredReports.length === 0) return null;
+
+      const typeLabels = {
+        item: "📦 Item Reports",
+        chat: "💬 Chat Reports",
+      };
+
+      return (
+        <div key={type}>
+          <h3 className="text-lg text-black font-semibold mb-3 border-b border-blue-800 pb-1 w-full">
+            {typeLabels[type]} ({filteredReports.length})
+          </h3>
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+            {filteredReports.map((r) => (
+              <motion.div
+                key={r.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-blue-600/30 text-black rounded-xl p-4 border border-black flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
+              >
+                <div className="flex flex-col sm:flex-row sm:gap-4">
+             <p className="flex flex-wrap gap-2">
+              <span className="font-medium truncate">
+                {r.reporter_username || "Unknown"} Report {r.reported_username || "Unknown"}
+              </span>
+              <span className="text-medium text-black truncate">
+                [ From {r.type === "item"
+                  ? `Item: ${r.reported_item_title || "N/A"}`
+                  : `Chat: ${r.chat_id || "-"}`} ]
+              </span>
+            </p>
+                  <p className="text-sm text-black truncate mt-1">
+                    Reason : <span className="truncate">{r.comment}</span>
+                  </p>
+                </div>
+                <p className="text-sm text-black whitespace-nowrap">
+                  {new Date(r.created_at).toLocaleString()}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      );
+    })}
+
+    {reports.length === 0 && (
+      <p className="text-center text-gray-400 py-8">No reports found</p>
+    )}
+  </div>
+)}
+
+
+
+
+      {/* Logs Tab */}
+      {activeTab === "logs" && (
+        <div className="space-y-6 p-2">
+          {["login", "logout", "delete_user", "delete_post"].map(type => {
+            const filteredLogs = logs
+              .filter(log => log.action_type === type)
+              .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            if (filteredLogs.length === 0) return null;
+
+            const typeLabels = {
+              login: "🟢 Login Logs",
+              logout: "🔴 Logout Logs",
+              delete_user: "🗑️ Delete User Logs",
+              delete_post: "🧾 Delete Post Logs",
+            };
+
+
+            return (
+              <div key={type}>
+                <h3 className="text-lg text-black font-semibold mb-3 border-b border-blue-800 pb-1 w-full">
+                  {typeLabels[type]} ({filteredLogs.length})
+                </h3>
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                  {filteredLogs.map((log) => (
+                    <motion.div
+                      key={log.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="bg-blue-600/30 text-black rounded-xl p-4 border border-black flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
+                    >
+                      <div>
+                        <p className="font-medium truncate">{log.action}</p>
+                        <p className="text-sm text-black truncate">
+                          by {log.admin_username || log.username} | <span className="italic">{log.action_type}</span>
+                        </p>
+                      </div>
+                      <p className="text-sm text-black whitespace-nowrap">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {logs.length === 0 && <p className="text-center text-gray-400 py-8">No admin logs yet</p>}
+        </div>
+      )}
+    </>
+  )}
+</motion.div>
+
+
       {errorMsg && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-gray-800 text-white p-6 rounded-lg max-w-sm text-center">
@@ -401,4 +520,4 @@ const handleLogout = async () => {
   );
 };
 
-export default adminPage;
+export default AdminPage;
