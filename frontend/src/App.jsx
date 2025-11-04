@@ -8,6 +8,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { useState, useEffect } from "react";
+
 import UploadPage from "./UploadPage.jsx";
 import CameraPage from "./CameraPage.jsx";
 import ChatPage from "./ChatPage.jsx";
@@ -25,6 +26,9 @@ import ResetOTPPage from "./ResetOTP.jsx";
 import ResetPasswordPage from "./ResetPassword.jsx";
 import { useCheckSession } from "./useCheckSession.jsx";
 
+// Cookie consent component (จากตัวอย่างก่อนหน้า)
+import CookieConsent from "./CookieConsent.jsx";
+import PDPD from "./PDPA.jsx";
 // ✅ Wrapper สำหรับ Router
 function AppWrapper() {
   return (
@@ -53,6 +57,9 @@ function App() {
   const shouldHideHeader = hideHeaderRoutes.includes(location.pathname);
   const { checkSession } = useCheckSession();
 
+  // state เพื่อ re-mount CookieConsent เมื่อผู้ใช้ต้องการแก้การยินยอม
+  const [cookieKey, setCookieKey] = useState(0);
+
   // ✅ ตรวจสอบ session แต่ไม่บังคับ redirect ถ้าไม่มี session
   useEffect(() => {
     const verifySession = async () => {
@@ -68,6 +75,7 @@ function App() {
       }
     };
     verifySession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   useEffect(() => {
@@ -75,8 +83,20 @@ function App() {
     if (saved) setCurrentUser(JSON.parse(saved));
   }, [isAuthenticated]);
 
+  // ฟังก์ชัน: เปิด Cookie Settings ให้ผู้ใช้แก้การยินยอม (โดยการลบ cookie แล้ว re-mount)
+  const openCookieSettings = () => {
+    // ลบ cookie_consent (path=/) เพื่อให้ CookieConsent คิดว่า "ยังไม่ตั้งค่า"
+    document.cookie = "cookie_consent=; Max-Age=0; path=/; SameSite=Lax";
+    // re-mount component (เรียก useEffect ภายใน CookieConsent อีกครั้ง)
+    setCookieKey((k) => k + 1);
+    // ถ้าซ่อน header อยู่ (เช่น /camera) อยากให้กลับไปหน้าแรกก่อนเปิด popup ก็ไม่จำเป็น
+  };
+
   return (
     <div className="min-h-screen flex flex-col font-sans text-gray-100">
+      {/* Cookie consent (component จะตรวจ document.cookie เอง) */}
+      <CookieConsent key={cookieKey} />
+
       {/* Navbar */}
       {!shouldHideHeader && (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-[#111827] border-b border-gray-800 shadow-md text-white">
@@ -206,6 +226,7 @@ function App() {
               <Route path="/reset" element={<ResetPage />} />
               <Route path="/reset-otp" element={<ResetOTPPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/pdpa" element={<PDPD />} />
 
               {/* 🔒 หน้าที่ต้องล็อกอินก่อนถึงจะเข้าได้ */}
               <Route
@@ -247,6 +268,7 @@ function App() {
       {!shouldHideHeader && (
         <footer className="bg-[#111827] border-t border-gray-800 text-gray-400 shadow-inner">
           <div className="max-w-6xl mx-auto px-4 text-center py-3">
+            
             <div className="flex items-center justify-center space-x-2 mb-1">
               <div className="w-7 h-7 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shadow-md border border-black/40">
                 <span className="text-black font-bold text-xs">L&F</span>
@@ -255,9 +277,12 @@ function App() {
                 Lost & Found
               </span>
             </div>
+
             <p className="text-gray-500 text-sm">
               &copy; 2025 Lost & Found. All Rights Reserved.
             </p>
+
+           
           </div>
         </footer>
       )}
