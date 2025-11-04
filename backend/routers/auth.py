@@ -153,7 +153,7 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Password is not strong")
 
     # สร้าง OTP
-    otp = f"{random.randint(100000, 999999)}"
+    otp = f"{secrets.randbelow(900000) + 100000}"
     otp_hashed = hashlib.sha256(otp.encode()).hexdigest()
     otp_expire = datetime.utcnow() + timedelta(minutes=5)
 
