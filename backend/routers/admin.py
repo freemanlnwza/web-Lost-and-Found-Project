@@ -1,107 +1,152 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+import base64
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-import models, crud
-from crud import get_admin_user, log_admin_action
+import models
+from crud import get_current_admin
 from database import get_db
-
+import crud
 router = APIRouter(prefix="/admin", tags=["Admin"])
-security = HTTPBearer()
 
-# Users
+# Helper function ดึง admin จาก cookie
+
+
+# ================= Users =================
 @router.get("/users")
-def admin_get_users(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    admin = get_admin_user(credentials, db)
+def admin_get_users(admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
     users = db.query(models.User).all()
     return [{"id": u.id, "username": u.username, "role": getattr(u, 'role', 'user')} for u in users]
 
+
 @router.delete("/users/{user_id}")
-def admin_delete_user(user_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    admin = get_admin_user(credentials, db)
+def admin_delete_user(
+    user_id: int, 
+    admin: models.User = Depends(get_current_admin), 
+    db: Session = Depends(get_db)
+):
+    # ดึง user ก่อน
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if getattr(user, 'role', '') == "admin":
+
+    # ป้องกันการลบ admin คนอื่นโดยไม่ได้ตั้งใจ
+    if getattr(user, "role", "") == "admin":
         raise HTTPException(status_code=403, detail="Cannot delete admin users")
+
+    # ✅ ลบ session ที่อ้างอิงถึง user นี้ก่อน
+    db.query(models.Session).filter(models.Session.user_id == user_id).delete()
+
+    # ✅ ลบ user
     db.delete(user)
     db.commit()
-    log_admin_action(db, admin.id, admin.username, f"Deleted user ID: {user_id}")
-    return {"message": "User deleted"}
+
+    # ✅ Log action
+    crud.log_admin_action(
+        db,
+        admin.id,
+        admin.username,
+        f"Deleted username: {user.username}",
+        action_type="delete_user"
+    )
+
+    return {"message": "User deleted ✅"}
+
+
 
 @router.patch("/users/{target_user_id}/make-admin")
-def admin_make_admin(target_user_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    admin = get_admin_user(credentials, db)
+def admin_make_admin(target_user_id: int, admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == target_user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user.role = "admin"
     db.commit()
-    log_admin_action(db, admin.id, admin.username, f"Promoted {user.username} to admin")
+    crud.log_admin_action(db, admin.id, admin.username, f"Promoted {user.username} to admin")
     return {"message": f"{user.username} is now admin"}
 
-@router.patch("/users/{user_id}/remove-admin")
-def remove_admin_role(user_id: int,credentials: HTTPAuthorizationCredentials = Depends(security),db: Session = Depends(get_db)):
-    admin = get_admin_user(credentials, db)
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user.role != "admin":
-        raise HTTPException(status_code=400, detail="User is not an admin")
-    user.role = "user"
-    db.commit()
-    db.refresh(user)
-    log_admin_action(db, admin.id, admin.username, f"Demoted {user.username} to user")
-    return {"message": f"Removed admin role from {user.username}"}
 
-# Items
+# ================= Items =================
 @router.get("/items")
-def admin_get_items(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    admin = get_admin_user(credentials, db)
+def admin_get_items(admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
     items = db.query(models.Item).all()
-    return [{"id": i.id, "title": i.title, "category": i.category, "user_id": i.user_id} for i in items]
+    return [
+        {
+            "id": i.id,
+            "title": i.title,
+            "category": i.category,
+            "image": base64.b64encode(i.original_image_data).decode("utf-8") if i.original_image_data else None,
+            "user_id": i.user_id
+        } for i in items
+    ]
+
 
 @router.delete("/items/{item_id}")
-def admin_delete_item(item_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    admin = get_admin_user(credentials, db)
+def admin_delete_item(item_id: int, admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
     item = db.query(models.Item).filter(models.Item.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     title = item.title
     db.delete(item)
     db.commit()
-    log_admin_action(db, admin.id, admin.username, f"Deleted item '{title}' (ID: {item_id})")
+    crud.log_admin_action(db, admin.id, admin.username, f"Deleted item '{title}' (ID: {item_id})", action_type="delete_post")
     return {"message": "Item deleted"}
 
-# Messages
+
+# ================= Messages =================
 @router.get("/messages")
-def admin_get_messages(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    admin = get_admin_user(credentials, db)
+def admin_get_messages(admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
     messages = db.query(models.Message).all()
     return [{"id": m.id, "chat_id": m.chat_id, "sender_id": m.sender_id, "message": m.message} for m in messages]
 
+
 @router.delete("/messages/{message_id}")
-def admin_delete_message(message_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    admin = get_admin_user(credentials, db)
+def admin_delete_message(message_id: int, admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
     message = db.query(models.Message).filter(models.Message.id == message_id).first()
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
     db.delete(message)
     db.commit()
-    log_admin_action(db, admin.id, admin.username, f"Deleted message (ID: {message_id})")
+    crud.log_admin_action(db, admin.id, admin.username, f"Deleted message (ID: {message_id})")
     return {"message": "Message deleted"}
 
-# Logs
+# ================= Reports =================
+@router.get("/reports")
+def admin_get_reports(admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
+    reports = db.query(models.Report).all()
+    result = []
+    for r in reports:
+        result.append({
+            "id": r.id,
+            "reporter_id": r.reporter_id,
+            "reporter_username": r.reporter.username if hasattr(r, "reporter") and r.reporter else None,
+            "reported_user_id": r.reported_user_id,
+            "reported_username": r.reported_username,
+            "item_id": r.item_id,
+            "reported_item_title": r.reported_item_title,
+            "reported_item_image": r.reported_item_image,
+            "chat_id": r.chat_id,
+            "reported_chat_preview": r.reported_chat_preview,
+            "type": r.type,
+            "comment": r.comment,
+            "created_at": r.created_at,
+        })
+    return result
+
+
+# ================= Logs =================
 @router.get("/logs")
-def admin_get_logs(
-    credentials: HTTPAuthorizationCredentials = Depends(security),db: Session = Depends(get_db)):
-    admin = get_admin_user(credentials, db)
-    logs = (db.query(models.AdminLog).order_by(models.AdminLog.timestamp.desc()).limit(50).all())
+def admin_get_logs(admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
+    logs = db.query(models.AdminLog).order_by(models.AdminLog.timestamp.desc()).limit(50).all()
     return [
         {
-            "id": log.id,
-            "admin_username": log.admin_username,
-            "action": log.action,
-            "timestamp": log.timestamp.strftime("%m/%d/%Y, %I:%M:%S %p")
-        }
-        for log in logs
+            "id": l.id,
+            "admin_username": l.admin_username,
+            "action": l.action,
+            "timestamp": l.timestamp,
+            "action_type": l.action_type,
+        } for l in logs
     ]
+
+
+@router.get("/logs/count")
+def admin_logs_count(admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
+    total = db.query(models.AdminLog).count()
+    return {"total_logs": total}

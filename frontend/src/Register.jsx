@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, XCircle } from "lucide-react";
 
+// ====================== Popup Component ======================
 const Popup = ({ message, type = "success", onClose }) => {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-8 rounded-3xl shadow-2xl w-96 text-center border border-gray-700 transform animate-scale-in">
-        {/* Icon */}
         <div className="mb-4 flex justify-center">
           {type === "success" ? (
             <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center animate-bounce-in">
@@ -18,16 +18,11 @@ const Popup = ({ message, type = "success", onClose }) => {
             </div>
           )}
         </div>
-
-        {/* Message */}
-        <h3 className={`text-xl font-bold mb-2 ${
-          type === "success" ? "text-green-400" : "text-red-400"
-        }`}>
+        <h3 className={`text-xl font-bold mb-2 ${type === "success" ? "text-green-400" : "text-red-400"}`}>
           {type === "success" ? "Success!" : "Error"}
         </h3>
         <p className="text-gray-300 mb-6">{message}</p>
 
-        {/* Button */}
         <button
           onClick={onClose}
           className={`w-full py-3 rounded-xl font-semibold text-white transition-all transform hover:scale-105 active:scale-95 ${
@@ -43,115 +38,155 @@ const Popup = ({ message, type = "success", onClose }) => {
   );
 };
 
+// ====================== Register Component ======================
 const Register = () => {
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [strongPassword, setStrongPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const [popupMessage, setPopupMessage] = useState(""); // ข้อความ popup
-  const [popupType, setPopupType] = useState("success"); // ✅ เพิ่ม type
-  const [showPopup, setShowPopup] = useState(false); // toggle popup
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType, setPopupType] = useState("success");
+  const [showPopup, setShowPopup] = useState(false);
 
   const navigate = useNavigate();
 
+  // ====================== ฟังก์ชันเคลียร์ฟอร์ม ======================
+  const resetForm = () => {
+    setUsername("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setStrongPassword("");
+  };
+
+  // เคลียร์ฟอร์มอัตโนมัติเมื่อโหลดหน้า
+  useEffect(() => {
+    resetForm();
+  }, []);
+
   const showMessage = (msg, type = "success") => {
     setPopupMessage(msg);
-    setPopupType(type); // ✅ เซ็ต type
+    setPopupType(type);
     setShowPopup(true);
   };
 
-  const handlePopupClose = () => {
-    setShowPopup(false);
-    // ✅ เฉพาะตอน success ถึงจะไปหน้า login
-    if (popupType === "success") {
-      navigate("/login");
+  const handlePopupClose = () => setShowPopup(false);
+
+  const fetchStrongPassword = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/auth/strong-password");
+      const data = await res.json();
+      if (res.ok) setStrongPassword(data.password);
+    } catch (error) {
+      console.error(error);
+      showMessage("Failed to generate strong password.", "error");
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSendOtp = async (e) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      showMessage("Passwords do not match!", "error"); // ✅ ส่ง type เป็น error
-      return;
+
+    if (!email.match(/@(gmail\.com|hotmail\.com|outlook\.com|yahoo\.com)$/)) {
+      return showMessage("Email must be Gmail / Outlook / Yahoo / Hotmail", "error");
     }
 
+    const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+    if (!strongRegex.test(password)) {
+      return showMessage("Password is not strong enough.", "error");
+    }
+
+    if (password !== confirmPassword) {
+      return showMessage("Passwords do not match.", "error");
+    }
+
+    if (loading) return; // ✅ ป้องกัน double submit
+
+    setLoading(true);
     try {
       const response = await fetch("http://127.0.0.1:8000/auth/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: username,
-          password: password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        showMessage(errorData.detail || "Unknown error", "error"); // ✅ ส่ง type เป็น error
+        showMessage(data.detail || "Failed to send OTP.", "error");
         return;
       }
 
-      await response.json();
-      showMessage("Registration successful!", "success"); // ✅ ส่ง type เป็น success
-      // ✅ ลบ setTimeout ออก - ให้กดปุ่ม OK แทน
+      resetForm(); // ✅ เคลียร์ฟอร์มหลังส่ง OTP สำเร็จ
+
+      navigate("/otp", { state: { username, email } });
     } catch (error) {
-      console.error("Error:", error);
-      showMessage("Connection error. Please try again.", "error"); // ✅ ส่ง type เป็น error
+      console.error(error);
+      showMessage("Connection error. Please try again.", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <main className="flex items-center justify-center">
-      <div className="w-full max-w-md bg-gray-900 backdrop-blur-lg rounded-2xl shadow-2xl p-10 space-y-6 text-white border border-gray-800">
-        {/* Title */}
+    <main className="flex items-center justify-center h-full pt-14 px-4 sm:px-6 lg:px-8 bg-gray-900">
+  <div className="w-full max-w-sm sm:max-w-sm md:max-w-sm lg:max-w-sm bg-gray-800 bg-opacity-90 backdrop-blur-md rounded-2xl shadow-2xl p-4 sm:p-6 md:p-6 space-y-4 sm:space-y-5 text-white border border-gray-900 mx-auto">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white">Register</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Register</h1>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSendOtp} className="space-y-4 sm:space-y-5">
           <div>
-            <label htmlFor="username" className="block text-sm mb-2 text-gray-300">
-              Username
-            </label>
+            <label htmlFor="username" className="block text-sm mb-1 text-gray-300">Username</label>
             <input
               type="text"
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 placeholder-gray-500 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
               placeholder="Username"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm mb-2 text-gray-300">
-              Password
-            </label>
+            <label htmlFor="email" className="block text-sm mb-1 text-gray-300">Email</label>
             <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 placeholder-gray-500 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
-              placeholder="••••••••"
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
+              placeholder="you@example.com"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm mb-2 text-gray-300">
-              Confirm Password
-            </label>
+            <label htmlFor="password" className="block text-sm mb-1 text-gray-300">Password</label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
+              placeholder="••••••••"
+              required
+            />
+            {strongPassword && <p className="text-sm text-green-400 mt-1">Suggested strong password: {strongPassword}</p>}
+           
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm mb-1 text-gray-300">Confirm Password</label>
             <input
               type="password"
               id="confirmPassword"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 placeholder-gray-500 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
+              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
               placeholder="••••••••"
               required
             />
@@ -159,55 +194,32 @@ const Register = () => {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 transition-all"
+            disabled={loading}
+            className="w-full py-3 rounded-lg font-semibold text-white 
+                       bg-gradient-to-r from-indigo-500 to-blue-600 
+                       hover:from-indigo-600 hover:to-blue-700 
+                       transition-all 
+                       disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
           >
-            Register
+            {loading ? "Sending OTP..." : "Send OTP"}
           </button>
+         {/* ================= Login Link ================= */}
+          <div className="text-center mt-3">
+            <p className="text-sm text-gray-300">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                className="text-blue-400 hover:underline "
+              >
+                Login
+              </button>
+            </p>
+          </div>
         </form>
-
-        {/* Login link */}
-        <p className="text-center text-sm text-gray-400">
-          Have an account?{" "}
-          <a href="/login" className="text-blue-400 hover:underline">
-            Log In
-          </a>
-        </p>
       </div>
 
-      {/* Popup */}
-      {showPopup && (
-        <Popup 
-          message={popupMessage} 
-          type={popupType} 
-          onClose={handlePopupClose} 
-        />
-      )}
-
-      {/* ✅ เพิ่ม animations */}
-      <style jsx>{`
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes scale-in {
-          from { transform: scale(0.9); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        @keyframes bounce-in {
-          0% { transform: scale(0); }
-          50% { transform: scale(1.1); }
-          100% { transform: scale(1); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
-        }
-        .animate-scale-in {
-          animation: scale-in 0.3s ease-out;
-        }
-        .animate-bounce-in {
-          animation: bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-      `}</style>
+      {showPopup && <Popup message={popupMessage} type={popupType} onClose={handlePopupClose} />}
     </main>
   );
 };

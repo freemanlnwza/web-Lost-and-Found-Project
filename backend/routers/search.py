@@ -81,10 +81,13 @@ async def search_items(
             # print(f"[DEBUG] id={i.id} match_factor={match_factor:.3f} scale={scale:.3f} sim_adj={sim:.4f}")
 
         results.append({
-            "id": i.id, "title": i.title, "type": i.type, "category": i.category,
-            "image_data": encode_image(i.image_data, i.image_content_type),
-            "boxed_image_data": encode_image(i.boxed_image_data, i.image_content_type),
-            "image_filename": i.image_filename,
+            "id": i.id,
+            "title": i.title,
+            "type": i.type,
+            "category": i.category,
+            "image_data": encode_image(i.original_image_data, i.image_content_type),  # <-- ใช้ภาพเต็ม
+            "boxed_image_data": encode_image(i.boxed_image_data, "image/png"),       # ภาพกรอบยังเก็บไว้
+            "original_image_data": encode_image(i.original_image_data, i.image_content_type),  # ส่งกลับด้วย
             "user_id": i.user_id,
             "username": i.user.username if i.user else None,
             "similarity": round(sim, 4)

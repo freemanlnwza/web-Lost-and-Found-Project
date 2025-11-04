@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
 
@@ -6,12 +6,11 @@ from datetime import datetime
 # User models
 # -------------------------
 class UserCreate(BaseModel):
-    # โมเดลสำหรับสร้างผู้ใช้ใหม่
-    username: str  # ชื่อผู้ใช้
-    password: str  # รหัสผ่าน
+    username: str
+    email: str 
+    password: str
 
     class Config:
-        # ตัวอย่าง JSON สำหรับ Swagger / docs
         json_schema_extra = {
             "example": {
                 "username": "testuser",
@@ -20,40 +19,56 @@ class UserCreate(BaseModel):
         }
 
 class UserOut(BaseModel):
-    # โมเดลสำหรับแสดงข้อมูลผู้ใช้
-    id: int  # ID ผู้ใช้
-    username: str  # ชื่อผู้ใช้
-    role: str  # สิทธิ์ผู้ใช้ เช่น user, admin
+    id: int
+    username: str
+    email: str     
+    role: str
+    is_verified: bool = False
+    session_token: Optional[str] = None  # สำหรับ login response (เซ็ตใน HttpOnly cookie)
+    session_expires_at: Optional[datetime] = None  # เพิ่ม field สำหรับวันหมดอายุ session
 
     class Config:
-        # เปิดใช้งานการดึงค่าจาก attributes ของ ORM
         from_attributes = True
 
 
+class UserVerifyOTP(BaseModel):
+    email: str
+    otp: str | None = None  
+
+class ResetRequest(BaseModel):
+    username: str
+    email: EmailStr
+
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+class UpdatePasswordRequest(BaseModel):
+    email: EmailStr
+    new_password: str
 # -------------------------
 # Item models
 # -------------------------
 class ItemCreate(BaseModel):
-    # โมเดลสำหรับสร้าง Item ใหม่
-    title: str  # ชื่อไอเท็ม
-    type: str  # lost หรือ found
-    category: str  # หมวดหมู่ไอเท็ม
+    title: str
+    type: str
+    category: str
+    original_image_data: Optional[bytes] = None
 
 class ItemOut(BaseModel):
-    # โมเดลสำหรับแสดงข้อมูลไอเท็ม
     id: int
     title: str
     type: str
     category: str
-    image_data: Optional[str] = None  # รูปไอเท็มเป็น base64
-    boxed_image_data: Optional[str] = None  # รูปที่มี bounding box
-    image_filename: Optional[str] = None  # ชื่อไฟล์ภาพ
-    user_id: Optional[int] = None  # ID ผู้โพสต์
-    username: Optional[str] = None  # ชื่อผู้โพสต์
-
-    similarity: Optional[float] = None  # คะแนนความคล้าย (ใช้ค้นหา)
-    query_vector_first2: Optional[List[float]] = None  # ตัวอย่างเวกเตอร์ที่ใช้ค้นหา
-    item_vector_first2: Optional[List[float]] = None  # ตัวอย่างเวกเตอร์ของไอเท็ม
+    image_data: Optional[str] = None
+    boxed_image_data: Optional[str] = None
+    image_filename: Optional[str] = None
+    user_id: Optional[int] = None
+    username: Optional[str] = None
+    original_image_data: Optional[str] = None
+    similarity: Optional[float] = None
+    query_vector_first2: Optional[List[float]] = None
+    item_vector_first2: Optional[List[float]] = None
 
     class Config:
         from_attributes = True
@@ -63,21 +78,22 @@ class ItemOut(BaseModel):
 # Message models
 # -------------------------
 class MessageBase(BaseModel):
-    # ข้อมูลข้อความพื้นฐาน
-    message: str  # เนื้อหาข้อความ
+    message: str
 
 class MessageCreate(MessageBase):
-    # ใช้สร้างข้อความใหม่
-    sender_id: int  # ผู้ส่ง
-    chat_id: int  # ห้องแชท
+    chat_id: int
+    image_data: Optional[bytes] = None
+    image_content_type: Optional[str] = None
+    image_filename: Optional[str] = None
 
 class MessageOut(MessageBase):
-    # แสดงข้อความพร้อมข้อมูลเพิ่มเติม
-    id: int  # ID ข้อความ
-    chat_id: int  # ห้องแชท
-    sender_id: int  # ผู้ส่ง
-    created_at: datetime  # เวลาสร้าง
-    username: Optional[str] = None  # ชื่อผู้ส่ง
+    id: int
+    chat_id: int
+    sender_id: int 
+    created_at: datetime
+    username: Optional[str] = None
+    image_data: Optional[str] = None
+    image_filename: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -87,17 +103,15 @@ class MessageOut(MessageBase):
 # Chat models
 # -------------------------
 class ChatBase(BaseModel):
-    # ข้อมูลพื้นฐานของ chat
-    user1_id: int  # ID ของ user1
-    user2_id: int  # ID ของ user2
+    user1_id: int
+    user2_id: int
 
 class ChatOut(ChatBase):
-    # แสดง chat พร้อมข้อมูลเพิ่มเติม
-    id: int  # ID chat
-    created_at: datetime  # เวลาสร้าง chat
-    user1_username: Optional[str] = None  # username ของ user1
-    user2_username: Optional[str] = None  # username ของ user2
-    item_title: Optional[str] = None  # ชื่อไอเท็มที่เกี่ยวข้อง (ถ้ามี)
+    id: int
+    created_at: datetime
+    user1_username: Optional[str] = None
+    user2_username: Optional[str] = None
+    item_title: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -107,21 +121,24 @@ class ChatOut(ChatBase):
 # Chat with messages
 # -------------------------
 class ChatDetail(ChatOut):
-    # แสดง chat พร้อมรายการข้อความ
-    messages: List[MessageOut] = []  # รวม messages พร้อม username ของผู้ส่ง
+    messages: List[MessageOut] = []
 
 
 # -------------------------
 # Request models
 # -------------------------
 class ChatCreateRequest(BaseModel):
-    # โมเดลสำหรับสร้าง chat ใหม่
-    user1_id: int  # ID ผู้ใช้คนที่ 1
-    user2_id: int  # ID ผู้ใช้คนที่ 2
-    item_id: Optional[int] = None  # item_id จะส่งก็ได้ ไม่ส่งก็ได้
+    
+    user2_id: int
+    item_id: Optional[int] = None
 
 class MessageSendRequest(BaseModel):
-    # โมเดลสำหรับส่งข้อความ
-    chat_id: int  # ID ห้องแชท
-    sender_id: int  # ID ผู้ส่ง
-    message: str  # ข้อความที่จะส่ง
+    chat_id: int
+    message: str  # sender_id ไม่จำเป็น เพราะ backend ใช้ current_user จาก cookie
+
+
+class ReportCreate(BaseModel):
+    item_id: Optional[int] = None       # ID ของ item ที่จะรายงาน (สามารถเป็น None)
+    chat_id: Optional[int] = None       # ID ของ chat ที่จะรายงาน (สามารถเป็น None)
+    type: str = "item"                  # default เป็น "item"
+    comment: Optional[str] = ""         # comment เพิ่มเติม
