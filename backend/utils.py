@@ -13,7 +13,7 @@ base_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device
 # ======================================================
 # โหลด fine-tuned CLIP ถ้ามี
 # ======================================================
-finetuned_path = "finetuned_clip_optimized"
+finetuned_path = "finetuned_clip_fast"
 if os.path.exists(finetuned_path):
     try:
         print("✅ Loading fine-tuned CLIP...")

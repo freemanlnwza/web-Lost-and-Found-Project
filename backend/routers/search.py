@@ -6,6 +6,7 @@ from crud import encode_image
 from database import get_db
 import models, schemas, crud
 from transformers import MarianMTModel, MarianTokenizer
+import string
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -16,12 +17,19 @@ trans_model = MarianMTModel.from_pretrained(translation_model_name).to(device)
 router = APIRouter(prefix="/api", tags=["Search"])
 
 def translate_to_english(text: str):
+    """แปลไทยเป็นอังกฤษ และตัด punctuation ที่ปลายคำ"""
     if any('\u0E00' <= ch <= '\u0E7F' for ch in text):
         inputs = trans_tokenizer(text, return_tensors="pt", padding=True).to(device)
         with torch.no_grad():
             translated = trans_model.generate(**inputs)
         text = trans_tokenizer.decode(translated[0], skip_special_tokens=True)
+        # ตัด punctuation ที่ปลาย string
+        text = text.strip().rstrip(string.punctuation)
     return text
+
+def normalize_text(text: str) -> str:
+    """Lowercase และลบ punctuation + extra spaces"""
+    return text.lower().translate(str.maketrans("", "", string.punctuation)).strip()
 
 @router.post("/search", response_model=list[schemas.ItemOut])
 async def search_items(
@@ -33,52 +41,60 @@ async def search_items(
     if not text and not image:
         raise HTTPException(status_code=400, detail="Provide text or image for search")
 
-    # translate if needed
-    if text:
-        if any('\u0E00' <= ch <= '\u0E7F' for ch in text):
-            inputs = trans_tokenizer(text, return_tensors="pt", padding=True).to(device)
-            with torch.no_grad():
-                translated = trans_model.generate(**inputs)
-            text = trans_tokenizer.decode(translated[0], skip_special_tokens=True)
+    EPS = 0.15  # small epsilon so we never kill sim to 0 completely when there's no text match
 
-        # get text embedding (from utils — ensure utils loads finetuned model)
-        query_emb = get_text_embedding(text)
+    if text:
+        # Keep original Thai text
+        query_texts = [text]
+
+        # translate to English if contains Thai
+        if any('\u0E00' <= ch <= '\u0E7F' for ch in text):
+            eng_text = translate_to_english(text)
+            query_texts.append(eng_text)  # add English version
+
+        # normalize all query texts
+        query_texts = [normalize_text(t) for t in query_texts]
+
+        # get embeddings for all versions
+        query_embs = [get_text_embedding(t) for t in query_texts]
         use_text = True
-        print("[INFO] Query text (after translate):", text)
+        print("[INFO] Query texts:", query_texts)
     else:
         image_bytes = await image.read()
-        query_emb = get_image_embedding(image_bytes)
+        query_embs = [get_image_embedding(image_bytes)]
         use_text = False
 
     # fetch a reasonable candidate set first (reduce DB cost)
     items = db.query(models.Item).limit(100).all()
 
     results = []
-    query_lower = text.lower() if text else None
-
-    # small epsilon so we never kill sim to 0 completely when there's no text match
-    EPS = 0.15
 
     for i in items:
         item_emb = i.text_embedding if use_text else i.image_embedding
-        sim = cosine_similarity(query_emb, item_emb)
+        sims = []
 
-        # If text search: softly adjust (don't zero-out)
-        if query_lower and use_text:
-            combined_text = " ".join(filter(None, [i.title, i.type, i.category])).lower()
-            # simple exact-word match factor
-            query_words = [w for w in query_lower.split() if w.strip()]
-            if len(query_words) == 0:
-                match_factor = 0.0
-            else:
-                match_factor = sum(1 for w in query_words if w in combined_text) / len(query_words)
+        # compute similarity for all query versions (Thai + English)
+        for q_emb, q_text in zip(query_embs, query_texts if use_text else [""]):
+            sim = cosine_similarity(q_emb, item_emb)
 
-            # soft scaling: keep a floor (EPS) to preserve embedding signal
-            scale = EPS + (1.0 - EPS) * match_factor
-            sim = sim * scale
+            # If text search: softly adjust (don't zero-out)
+            if use_text:
+                combined_text = " ".join(filter(None, [i.title, i.type, i.category]))
+                combined_text = normalize_text(combined_text)
+                query_words = [w for w in q_text.split() if w.strip()]
+                if len(query_words) == 0:
+                    match_factor = 0.0
+                else:
+                    match_factor = sum(1 for w in query_words if w in combined_text) / len(query_words)
+                scale = EPS + (1.0 - EPS) * match_factor
+                sim = sim * scale
 
-            # debug (optional)
-            # print(f"[DEBUG] id={i.id} match_factor={match_factor:.3f} scale={scale:.3f} sim_adj={sim:.4f}")
+                # debug (optional)
+                # print(f"[DEBUG] id={i.id} q_text={q_text} match_factor={match_factor:.3f} scale={scale:.3f} sim_adj={sim:.4f}")
+
+            sims.append(sim)
+
+        sim = max(sims)  # take highest similarity from all query versions
 
         results.append({
             "id": i.id,
