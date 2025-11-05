@@ -300,6 +300,7 @@ const NavLink = ({ to, label, onClick }) => (
     {label}
   </Link>
 );
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Logout button component
 const LogoutButton = ({ setIsAuthenticated, setCurrentUser }) => {
@@ -307,9 +308,9 @@ const LogoutButton = ({ setIsAuthenticated, setCurrentUser }) => {
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:8000/auth/logout", {
-        method: "POST",
-        credentials: "include",
+      await fetch(`${API_URL}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
       });
     } catch (error) {
       console.error("Logout API error:", error);

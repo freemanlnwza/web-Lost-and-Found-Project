@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
 import { MdOutlineDelete } from "react-icons/md";
-
+import { API_URL } from "./configurl"; 
 // ----------------- Utility -----------------
 const escapeHTML = (str) => {
   if (!str) return "";
@@ -48,7 +48,7 @@ const showPopup = (msg, redirect = false) => {
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/chats/me", {
+        const res = await fetch(`${API_URL}/api/chats/me`, {
           credentials: "include", // ใช้ cookie HttpOnly + SameSite
         });
         if (!res.ok) {
@@ -74,7 +74,7 @@ const showPopup = (msg, redirect = false) => {
     setLoading(true);
     try {
       const res = await fetch(
-        `http://localhost:8000/api/chats/${chatId}/messages`,
+        `${API_URL}/api/chats/${chatId}/messages`,
         { credentials: "include" }
       );
       if (!res.ok) {
@@ -157,7 +157,7 @@ const showPopup = (msg, redirect = false) => {
       }
 
       const res = await fetch(
-        "http://localhost:8000/api/chats/messages/send",
+        `${API_URL}/api/chats/messages/send`,
         {
           method: "POST",
           body: formData,
@@ -206,7 +206,7 @@ const deleteMessage = (id) => {
       setConfirmPopup(null); // ปิด confirm ก่อนลบ
       try {
         const res = await fetch(
-          `http://localhost:8000/api/chats/messages/${id}/delete`,
+          `${API_URL}/api/chats/messages/${id}/delete`,
           { method: "DELETE", credentials: "include" }
         );
         if (!res.ok) {
@@ -506,7 +506,7 @@ const LogoutButton = ({ setCurrentUser, setIsAuthenticated }) => {
   const navigate = useNavigate();
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:8000/auth/logout", {
+      await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
         credentials: "include",
       });

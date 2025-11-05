@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, XCircle } from "lucide-react";
+import { API_URL } from "./configurl"; 
 
 const Popup = ({ message, type = "success", onClose }) => (
   <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
@@ -142,7 +143,7 @@ const Login = ({ setIsAuthenticated }) => {
     formData.append("password", password);
 
     try {
-      const res = await fetch("http://localhost:8000/auth/login", {
+      const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         body: formData,
         credentials: "include",

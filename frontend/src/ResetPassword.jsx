@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { API_URL } from "./configurl"; 
 
 const ResetPasswordPage = () => {
   const [password, setPassword] = useState("");
@@ -44,7 +45,7 @@ const ResetPasswordPage = () => {
 
   setLoading(true);
   try {
-    const res = await fetch("http://127.0.0.1:8000/auth/reset-password/update", {
+    const res = await fetch(`${API_URL}/auth/reset-password/update`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, new_password: password })

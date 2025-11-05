@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MdOutlineCameraswitch } from "react-icons/md";
-
+import { API_URL } from "./configurl"; 
 
 // ================= Popup Component =================
 const Popup = ({ message, onClose }) => (
@@ -75,7 +75,7 @@ const CameraPage = () => {
           formData.append("image", blob, "frame.jpg");
 
           try {
-            const res = await fetch("http://localhost:8000/detect/frame", {
+            const res = await fetch(`${API_URL}/detect/frame`, {
               method: "POST",
               body: formData,
               credentials: "include",

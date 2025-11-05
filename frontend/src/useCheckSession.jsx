@@ -1,7 +1,11 @@
+import { API_URL } from "./configurl"; 
+
+
+
 export const useCheckSession = () => {
   const checkSession = async () => {
     try {
-      const res = await fetch("http://localhost:8000/auth/check-session", {
+      const res = await fetch(`${API_URL}/auth/check-session`, {
         method: "GET",
         credentials: "include", // ส่ง cookie ไป backend
       });

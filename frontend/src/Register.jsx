@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, XCircle } from "lucide-react";
+import { API_URL } from "./configurl"; 
 
 // ====================== Popup Component ======================
 const Popup = ({ message, type = "success", onClose }) => {
@@ -77,7 +78,7 @@ const Register = () => {
 
   const fetchStrongPassword = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/auth/strong-password");
+      const res = await fetch(`${API_URL}/auth/strong-password`);
       const data = await res.json();
       if (res.ok) setStrongPassword(data.password);
     } catch (error) {
@@ -106,7 +107,7 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const response = await fetch("http://127.0.0.1:8000/auth/register", {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, email, password }),

@@ -4,6 +4,7 @@ import { MessageCircle, MapPin, Calendar, User } from "lucide-react";
 import { MdOutlineReportProblem } from "react-icons/md";
 import { IoSearchCircleSharp } from "react-icons/io5";
 import { PiImagesSquareDuotone } from "react-icons/pi";
+import { API_URL } from "./configurl"; 
 
 const Lost = ({ currentUserId }) => {
   const [items, setItems] = useState([]);
@@ -45,7 +46,7 @@ const Lost = ({ currentUserId }) => {
       setItems([]);
 
       try {
-        const res = await fetch("http://localhost:8000/api/lost-items");
+        const res = await fetch(`${API_URL}/api/lost-items`);
         if (!res.ok) throw new Error("Failed to fetch lost items");
         const data = await res.json();
 
@@ -71,7 +72,7 @@ const Lost = ({ currentUserId }) => {
 
   const handleChat = async (otherUserId, itemId, ownerUsername, itemImage, itemTitle) => {
     try {
-      const res = await fetch("http://localhost:8000/api/chats/get-or-create", {
+      const res = await fetch(`${API_URL}/api/chats/get-or-create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -122,7 +123,7 @@ const Lost = ({ currentUserId }) => {
         comment: (reportComment || "An issue has been detected").trim(),
       };
 
-      const res = await fetch("http://localhost:8000/api/report", {
+      const res = await fetch(`${API_URL}/api/report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
