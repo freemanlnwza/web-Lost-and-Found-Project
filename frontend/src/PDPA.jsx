@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 
 const PrivacyPolicy = () => {
-  const [lang, setLang] = useState("th"); // 'th' or 'en'
+  const [lang, setLang] = useState("th");
 
   const toggleLang = () => {
     setLang(lang === "th" ? "en" : "th");
@@ -160,29 +160,40 @@ const PrivacyPolicy = () => {
   };
 
   return (
-    <main className="min-h-screen bg-white text-black p-6 sm:p-10 md:p-16 mt-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <main className="min-h-screen bg-gray-50 text-gray-800 p-5 sm:p-8 md:p-12 mt-4">
+      <div className="max-w-4xl mx-auto bg-white shadow-md rounded-xl p-6 sm:p-10 space-y-8">
+        {/* Language toggle */}
         <div className="flex justify-end">
           <button
             onClick={toggleLang}
-            className="border px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-500"
+            className="border px-4 mt-4 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-500 transition-all"
           >
             {lang === "th" ? "English" : "ไทย"}
           </button>
         </div>
 
-        <h1 className="text-3xl font-bold text-center">{t[lang].title}</h1>
-        <p className="text-sm text-gray-600 text-center">{t[lang].date}</p>
+        {/* Title */}
+        <h1 className="text-2xl sm:text-3xl font-bold text-center">
+          {t[lang].title}
+        </h1>
+        <p className="text-xs sm:text-sm text-gray-500 text-center">
+          {t[lang].date}
+        </p>
 
         {/* Table of Contents */}
-        <section className="bg-gray-100 p-4 rounded-md">
-          <h2 className="text-xl font-semibold mb-2">
+        <section className="bg-blue-50 border border-blue-200 p-4 rounded-md">
+          <h2 className="text-lg font-semibold mb-2 text-blue-700">
             {lang === "th" ? "สารบัญ (Table of Contents)" : "Table of Contents"}
           </h2>
-          <ul className="list-decimal list-inside space-y-1">
+          <ul className="list-decimal list-inside space-y-1 text-sm sm:text-base">
             {t[lang].sections.map((s) => (
               <li key={s.id}>
-                <a href={`#${s.id}`} className="text-blue-600 hover:underline">{s.title}</a>
+                <a
+                  href={`#${s.id}`}
+                  className="text-blue-600 hover:underline hover:text-blue-800"
+                >
+                  {s.title}
+                </a>
               </li>
             ))}
           </ul>
@@ -190,11 +201,24 @@ const PrivacyPolicy = () => {
 
         {/* Content Sections */}
         {t[lang].sections.map((sec, idx) => (
-          <section id={sec.id} className="space-y-2" key={sec.id}>
-            <h2 className="text-xl font-semibold">{sec.title}</h2>
-            <ul className="list-disc list-inside space-y-1">
+          <section id={sec.id} className="space-y-2 scroll-mt-24" key={sec.id}>
+            <h2 className="text-lg sm:text-xl font-semibold border-b pb-1 border-gray-200">
+              {sec.title}
+            </h2>
+            <ul className="list-disc list-inside space-y-1 text-sm sm:text-base leading-relaxed">
               {Object.values(t[lang].content)[idx].map((line, i) => (
-                <li key={i}>{line.includes("Email") ? <a href="mailto:lfound796@gmail.com" className="text-blue-600">{line}</a> : line}</li>
+                <li key={i}>
+                  {line.includes("Email") ? (
+                    <a
+                      href="mailto:lfound796@gmail.com"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {line}
+                    </a>
+                  ) : (
+                    line
+                  )}
+                </li>
               ))}
             </ul>
           </section>
