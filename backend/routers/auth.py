@@ -387,10 +387,3 @@ def logout_user(
         crud.log_admin_action(db, current_user.id, current_user.username, "Admin logged out", action_type="logout")
     
     return {"message": f"{current_user.username} logged out successfully"}
-
-@router.post("/logout")
-def logout_user(username: str = Form(...), db: Session = Depends(get_db)):
-    admin = db.query(crud.models.User).filter_by(username=username, role="admin").first()
-    if admin:
-        crud.log_admin_action(db, admin.id, admin.username, "Logout")
-    return {"message": "Logged out successfully"}
