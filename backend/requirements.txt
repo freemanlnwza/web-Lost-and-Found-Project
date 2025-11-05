@@ -1,0 +1,12 @@
+fastapi==0.121.0
+numpy==2.3.4
+pgvector==0.4.1
+Pillow==12.0.0
+psycopg2_binary==2.9.10
+pydantic==2.12.3
+python-dotenv==1.2.1
+python_bcrypt==0.3.2
+SQLAlchemy==2.0.44
+torch==2.8.0
+transformers==4.57.1
+ultralytics==8.3.214

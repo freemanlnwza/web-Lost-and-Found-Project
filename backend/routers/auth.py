@@ -378,7 +378,7 @@ def logout_user(
     response.delete_cookie(
         key="session_token",
         httponly=True,
-        secure=True, 
+        secure=True,
         path="/",  # ใช้ HTTPS ใน production
         samesite="none",)
     
