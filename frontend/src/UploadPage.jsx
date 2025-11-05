@@ -301,125 +301,137 @@ const submitForm = async () => {
 
   const user = JSON.parse(localStorage.getItem("user"));
 
-  return (
-    <main className="flex items-center justify-center h-full pt-24 pb-16 bg-gray-900">
-      <div className="w-full max-w-4xl bg-gray-800 bg-opacity-90 rounded-3xl shadow-2xl p-10 space-y-6 text-white border-2 border-gray-900 mx-auto animate-scale-in">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-center text-white drop-shadow-lg">
-          Upload Image & Message
-        </h1>
+return (
+  <main className="flex items-center justify-center h-full pt-24 pb-10 bg-gray-900">
+    <div className="w-full max-w-xl bg-gray-800 bg-opacity-90 rounded-2xl shadow-xl p-6 sm:p-8 space-y-5 text-white border border-gray-700 mx-auto animate-scale-in">
+      <h1 className="text-2xl sm:text-3xl font-extrabold text-center text-white drop-shadow-lg">
+        Upload Image & Message
+      </h1>
 
-        {/* Category */}
-        <div className="space-y-3">
-          <label className="block text-gray-300 text-lg">Select item category :</label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full p-4 rounded-xl border border-gray-700 bg-gray-900 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none text-base"
-          >
-            <option value="">-- SELECT --</option>
-            <option value="Wallet">Wallet</option>
-            <option value="Backpack">Backpack</option>
-            <option value="Key">Key</option>
-            <option value="Watch">Watch</option>
-            <option value="Mobile phone">Mobile phone</option>
-          </select>
-        </div>
-
-        {/* Camera Button */}
-        {user && (
-          <button
-            onClick={() => navigate("/camera")}
-            className="w-full py-3 rounded-xl text-lg font-semibold bg-green-600 hover:bg-green-700 transition-all"
-          >
-            📷 Open Camera
-          </button>
-        )}
-
-        {/* Upload File */}
-        <input type="file" accept="image/*" onChange={onFileChange} ref={fileInputRef} className="hidden" />
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          onDragOver={onDragOver}
-          onDrop={onDrop}
-          className="p-10 text-center border-2 border-dashed rounded-xl cursor-pointer border-gray-600 hover:border-violet-400 hover:bg-gray-800 transition-all"
+      {/* Category */}
+      <div className="space-y-2">
+        <label className="block text-gray-300 text-base sm:text-lg">
+          Select item category :
+        </label>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full p-3 rounded-xl border border-gray-700 bg-gray-900 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none text-sm sm:text-base"
         >
-          {!preview ? (
-            <p className="text-gray-400 text-lg">Click or drag file to upload</p>
-          ) : (
-            <img
-              src={preview}
-              alt="Preview"
-              className="mx-auto mb-3 w-40 h-40 sm:w-48 sm:h-48 object-cover rounded-xl shadow-md"
-            />
-          )}
-        </div>
+          <option value="">-- SELECT --</option>
+          <option value="Wallet">Wallet</option>
+          <option value="Backpack">Backpack</option>
+          <option value="Key">Key</option>
+          <option value="Watch">Watch</option>
+          <option value="Mobile phone">Mobile phone</option>
+        </select>
+      </div>
 
-        {/* Message */}
-        <textarea
-          placeholder="Please describe the lost item..."
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          className="w-full p-4 h-32 rounded-xl border border-gray-700 bg-gray-900 text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:outline-none text-base"
-        />
-
-        {/* Select Type */}
-        {user && (
-          <div className="grid grid-cols-1 gap-4">
-           <button
-  type="button"
-  onClick={() => {
-    selectType("lost");
-    setShowConfirmPopup(true);
-  }}
-  disabled={isSubmitting || cooldown} // ✅ กัน spam ระหว่าง cooldown
-  className={`w-full py-4 rounded-2xl font-semibold text-base transition-all ${
-    selectedType === "lost" ? "ring-2 ring-rose-400" : ""
-  } bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white disabled:opacity-50 disabled:cursor-not-allowed`}
->
-  📝 Report lost item
-</button>
-          </div>
-        )}
-
-        {/* Found item */}
+      {/* Camera Button */}
+      {user && (
         <button
-          type="button"
-          onClick={fetchFoundItems}
-          className="w-full py-4 rounded-2xl font-semibold text-base transition-all bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+          onClick={() => navigate("/camera")}
+          className="w-full py-2.5 rounded-xl text-base font-semibold bg-green-600 hover:bg-green-700 transition-all"
         >
-          🔍 Found item
+          📷 Open Camera
         </button>
+      )}
 
-        {/* Confirm Popup */}
-        {showConfirmPopup && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-2xl max-w-md w-full mx-4 border border-gray-700 p-6 animate-scale-in text-center">
-              <h2 className="text-2xl font-bold text-yellow-400 mb-4">Confirm Report</h2>
-              <p className="text-gray-300 mb-6">
-                Are you sure you want to report this as a lost item?
-              </p>
-              <div className="flex gap-4">
-                <button
-                  onClick={() => {
-                    if (isSubmitting) return;
-                    setShowConfirmPopup(false);
-                    submitForm();
-                  }}
-                  className="flex-1 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isSubmitting} // ✅ ป้องกัน spam
-                >
-                  ✅ Confirm
-                </button>
-                <button
-                  onClick={() => setShowConfirmPopup(false)}
-                  className="flex-1 py-3 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-semibold transition-all"
-                >
-                  ❌ Cancel
-                </button>
-              </div>
+      {/* Upload File */}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={onFileChange}
+        ref={fileInputRef}
+        className="hidden"
+      />
+      <div
+        onClick={() => fileInputRef.current?.click()}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        className="p-6 text-center border-2 border-dashed rounded-xl cursor-pointer border-gray-600 hover:border-violet-400 hover:bg-gray-800 transition-all"
+      >
+        {!preview ? (
+          <p className="text-gray-400 text-base sm:text-lg">
+            Click or drag file to upload
+          </p>
+        ) : (
+          <img
+            src={preview}
+            alt="Preview"
+            className="mx-auto mb-3 w-36 h-36 sm:w-44 sm:h-44 object-cover rounded-xl shadow-md"
+          />
+        )}
+      </div>
+
+      {/* Message */}
+      <textarea
+        placeholder="Please describe the lost item..."
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        className="w-full p-3 h-28 rounded-xl border border-gray-700 bg-gray-900 text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:outline-none text-sm sm:text-base"
+      />
+
+      {/* Select Type */}
+      {user && (
+        <div className="grid grid-cols-1 gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              selectType("lost");
+              setShowConfirmPopup(true);
+            }}
+            disabled={isSubmitting || cooldown}
+            className={`w-full py-3 rounded-2xl font-semibold text-base transition-all ${
+              selectedType === "lost" ? "ring-2 ring-rose-400" : ""
+            } bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            📝 Report lost item
+          </button>
+        </div>
+      )}
+
+      {/* Found item */}
+      <button
+        type="button"
+        onClick={fetchFoundItems}
+        className="w-full py-3 rounded-2xl font-semibold text-base transition-all bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+      >
+        🔍 Found item
+      </button>
+
+      {/* Confirm Popup */}
+      {showConfirmPopup && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-fade-in">
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-2xl max-w-md w-full mx-4 border border-gray-700 p-5 animate-scale-in text-center">
+            <h2 className="text-xl font-bold text-yellow-400 mb-3">
+              Confirm Report
+            </h2>
+            <p className="text-gray-300 mb-5">
+              Are you sure you want to report this as a lost item?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  if (isSubmitting) return;
+                  setShowConfirmPopup(false);
+                  submitForm();
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitting}
+              >
+                ✅ Confirm
+              </button>
+              <button
+                onClick={() => setShowConfirmPopup(false)}
+                className="flex-1 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-semibold transition-all"
+              >
+                ❌ Cancel
+              </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
         {/* Popups */}
         {showPopup && (

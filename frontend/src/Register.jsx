@@ -50,7 +50,7 @@ const Register = () => {
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("success");
   const [showPopup, setShowPopup] = useState(false);
-
+  const [showPasswordTips, setShowPasswordTips] = useState(false);
   const navigate = useNavigate();
 
   // ====================== ฟังก์ชันเคลียร์ฟอร์ม ======================
@@ -164,20 +164,47 @@ const Register = () => {
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm mb-1 text-gray-300">Password</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
-              placeholder="••••••••"
-              required
-            />
-            {strongPassword && <p className="text-sm text-green-400 mt-1">Suggested strong password: {strongPassword}</p>}
-           
-          </div>
+         <div>
+  <label htmlFor="password" className="block text-sm mb-1 text-gray-300">Password</label>
+  <input
+    type="password"
+    id="password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    className="w-full p-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
+    placeholder="••••••••"
+    required
+  />
+
+  {/* ปุ่มแสดง/ซ่อนคำแนะนำ */}
+  <button
+    type="button"
+    onClick={() => setShowPasswordTips(!showPasswordTips)}
+    className="text-xs text-yellow-400 hover:underline mt-2"
+  >
+    {showPasswordTips ? "Hide password tips ▲" : "Show password tips ▼"}
+  </button>
+
+  {/* ✅ แสดงคำแนะนำเมื่อกด */}
+  {showPasswordTips && (
+    <ul className="text-xs text-gray-400 mt-2 space-y-1 list-disc list-inside animate-fade-in">
+    <li>Password must be at least 8 characters long.</li>
+    <li>Include at least one uppercase letter (A–Z).</li>
+    <li>Include at least one lowercase letter (a–z).</li>
+    <li>Include at least one number (0–9).</li>
+    <li>Include at least one special character (e.g., @, #, $, %, &).</li>
+  </ul>
+
+  )}
+
+  {/* ✅ รหัสผ่านแนะนำจากระบบ */}
+  {strongPassword && (
+    <p className="text-sm text-green-400 mt-2">
+      💡 Suggested strong password: <span className="font-mono">{strongPassword}</span>
+    </p>
+  )}
+</div>
+
 
           <div>
             <label htmlFor="confirmPassword" className="block text-sm mb-1 text-gray-300">Confirm Password</label>

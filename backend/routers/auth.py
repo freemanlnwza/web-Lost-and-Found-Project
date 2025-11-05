@@ -345,8 +345,8 @@ def login_user(
         key="session_token",
         value=token,
         httponly=True,
-        secure=False,
-        samesite="lax",
+        secure=True, 
+        samesite="none",
         path="/",
         max_age=SESSION_EXPIRE_MINUTES * 60
     )
@@ -378,9 +378,9 @@ def logout_user(
     response.delete_cookie(
         key="session_token",
         httponly=True,
-        secure=False,
+        secure=True, 
         path="/",  # ใช้ HTTPS ใน production
-        samesite="lax",)
+        samesite="none",)
     
     # บันทึก log ถ้าเป็น admin
     if getattr(current_user, "role", "") == "admin":
