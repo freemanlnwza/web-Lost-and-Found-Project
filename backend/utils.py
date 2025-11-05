@@ -55,6 +55,11 @@ def get_image_embedding(image_source):
       - UploadFile (FastAPI)
       - bytes หรือ io.BytesIO
     คืนค่า embedding เป็น numpy array
+    รับภาพได้ทั้งแบบ:
+      - path
+      - UploadFile (FastAPI)
+      - bytes หรือ io.BytesIO
+    คืนค่า embedding เป็น numpy array
     """
     processor = finetuned_processor if use_finetuned else base_processor #สร้าง image embedding (ใช้ fine-tuned ถ้ามี)
     model = finetuned_model if use_finetuned else base_model
