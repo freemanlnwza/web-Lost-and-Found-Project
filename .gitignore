@@ -68,3 +68,7 @@ env/
 *.bak
 *.tmp
 *.temp
+
+# Ignore large model files
+backend/finetuned_clip_fast
+backend/finetuned_clip_optimized
