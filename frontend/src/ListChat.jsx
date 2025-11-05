@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { MessageCircle, Image as ImageIcon } from "lucide-react"; 
 import { MdDeleteOutline, MdOutlineReportProblem } from "react-icons/md"; 
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "./configurl"; 
 
 const ListChat = () => {
   const [chats, setChats] = useState([]); 
@@ -24,7 +25,7 @@ const ListChat = () => {
     let isMounted = true;
     const fetchChats = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/chats/me", { credentials: "include" });
+        const res = await fetch(`${API_URL}/api/chats/me`, { credentials: "include" });
         if (!res.ok) throw new Error("Unable to retrieve chat data");
         const data = await res.json();
         if (isMounted) setChats(data);
@@ -42,7 +43,7 @@ const ListChat = () => {
   useEffect(() => {
     const fetchUserItems = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/items/user", { credentials: "include" });
+        const res = await fetch(`${API_URL}/api/items/user`, { credentials: "include" });
         if (!res.ok) throw new Error("Unable to retrieve user items");
         const data = await res.json();
         setUserItems(data);
@@ -138,7 +139,7 @@ const submitReport = async () => {
       comment: (reportComment || "An issue has been detected").trim(),
     };
 
-    const res = await fetch("http://localhost:8000/api/report", {
+    const res = await fetch(`${API_URL}/api/report`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -170,7 +171,7 @@ const submitReport = async () => {
 
   const handleDeleteItem = async (item) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/items/${item.id}`, {
+      const res = await fetch(`${API_URL}/api/items/${item.id}`, {
         method: "DELETE",
         credentials: "include",
       });

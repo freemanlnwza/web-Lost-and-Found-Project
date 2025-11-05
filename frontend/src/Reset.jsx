@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "./configurl"; 
 
 const ResetPage = () => {
   const [username, setUsername] = useState("");
@@ -38,7 +39,7 @@ const ResetPage = () => {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/auth/reset-password/request", {
+      const res = await fetch(`${API_URL}/auth/reset-password/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, email }),

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { API_URL } from "./configurl"; 
 
 // ===================== Popup Component =====================
 const Popup = ({ type = "success", message, onClose, uploadedItem }) => {
@@ -235,7 +236,7 @@ const submitForm = async () => {
   formData.append("user_id", user?.id || 0);
 
   try {
-    const res = await fetch("http://localhost:8000/api/upload", {
+    const res = await fetch(`${API_URL}/api/upload`, {
       method: "POST",
       body: formData,
       credentials: "include",
@@ -282,7 +283,7 @@ const submitForm = async () => {
       if (message) formData.append("text", message);
       if (imageFile) formData.append("image", imageFile);
 
-      const res = await fetch("http://localhost:8000/api/search", {
+      const res = await fetch(`${API_URL}/api/search`, {
         method: "POST",
         body: formData,
         credentials: "include",

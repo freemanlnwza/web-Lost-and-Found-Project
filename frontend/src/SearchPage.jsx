@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PiImagesSquareDuotone } from "react-icons/pi";
+import { API_URL } from "./configurl"; 
 
 const SearchPage = () => {
   const location = useLocation();
