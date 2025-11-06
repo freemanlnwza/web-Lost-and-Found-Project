@@ -10,7 +10,7 @@ from crud import encode_image
 from database import get_db
 import models, schemas
 
-HF_TOKEN = os.getenv("HF_TOKEN")
+HF_TOKEN = os.getenv("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")
 
 router = APIRouter(prefix="/api", tags=["Search"])
 

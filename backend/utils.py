@@ -16,7 +16,7 @@ base_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device
 # ======================================================
 # โหลด fine-tuned CLIP จาก Hugging Face (private repo)
 # ======================================================
-HF_TOKEN = os.getenv("HF_TOKEN")  # สำหรับ private repo
+HF_TOKEN = os.getenv("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")  # สำหรับ private repo
 finetuned_repo = "freemanlnwza/modelCLIPfine-tuned"
 
 try:

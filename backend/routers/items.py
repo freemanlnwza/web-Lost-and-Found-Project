@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, Request
 from sqlalchemy.orm import Session
 import io
 from PIL import Image, ImageDraw, ImageFont
@@ -10,7 +10,6 @@ import models
   # ✅ นำเข้าฟังก์ชันสำหรับ cookie-based auth
 
 router = APIRouter(prefix="/api", tags=["Items"])
-yolo_model = YOLO("best.pt")
 
 # ============================
 # Upload item
@@ -22,11 +21,17 @@ async def upload_item(
     category: str = Form(...),
     image: UploadFile = File(...),
     current_user: models.User = Depends(get_current_user),  # ✅ ใช้ cookie auth
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request: Request = None  # ✅ เพิ่ม Request เพื่อเข้าถึง yolo_model
 ):
     # ตรวจสอบไฟล์ภาพ
     if not image.filename.lower().endswith((".jpg", ".jpeg", ".png")):
         raise HTTPException(status_code=400, detail="File must be an image (jpg, jpeg, png)")
+
+    # ✅ ดึง yolo_model จาก app instance แทนที่จะโหลดใหม่
+    yolo_model = request.app.yolo_model
+    if not yolo_model:
+        raise HTTPException(status_code=503, detail="YOLO model not loaded")
 
     # อ่านภาพต้นฉบับ
     image_bytes = await image.read()
@@ -145,6 +150,7 @@ def get_lost_items(
         )
         for i in items
     ]
+
 @router.get("/items/user", response_model=list[schemas.ItemOut])
 def get_my_items(
     current_user: models.User = Depends(get_current_user),  # ✅ ต้อง login
@@ -166,6 +172,7 @@ def get_my_items(
         )
         for i in items
     ]
+
 # ============================
 # Get items by user
 # ============================
