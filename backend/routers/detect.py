@@ -14,7 +14,7 @@ router = APIRouter(prefix="/detect", tags=["Detect"])
 # ===============================
 # โหลด YOLOv8 + CLIP Fine-tuned
 # ===============================
-HF_TOKEN = os.getenv("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")  # สำหรับ private repo
+HF_TOKEN = os.getenv("HF_TOKEN")  # สำหรับ private repo
 
 # YOLOv8 - Download from HuggingFace properly
 try:

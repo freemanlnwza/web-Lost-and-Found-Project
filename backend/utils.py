@@ -8,26 +8,20 @@ import os
 device = "cuda" if torch.cuda.is_available() else "cpu"  # ตรวจสอบ device
 
 # ======================================================
-# โหลด base CLIP
-# ======================================================
-base_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32", use_fast=False)
-base_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
-
-# ======================================================
 # โหลด fine-tuned CLIP จาก Hugging Face (private repo)
 # ======================================================
-HF_TOKEN = os.getenv("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")  # สำหรับ private repo
+HF_TOKEN = os.getenv("HF_TOKEN")  # สำหรับ private repo
 finetuned_repo = "freemanlnwza/modelCLIPfine-tuned"
 
 try:
     print("✅ Loading fine-tuned CLIP from Hugging Face...")
     finetuned_processor = CLIPProcessor.from_pretrained(
         finetuned_repo,
-        use_auth_token=HF_TOKEN
+        token=HF_TOKEN  # v5 Transformers ใช้ token แทน use_auth_token
     )
     finetuned_model = CLIPModel.from_pretrained(
         finetuned_repo,
-        use_auth_token=HF_TOKEN
+        token=HF_TOKEN  # v5 Transformers ใช้ token แทน use_auth_token
     ).to(device)
     use_finetuned = True
     print("✅ Fine-tuned CLIP loaded from HF.")
@@ -42,8 +36,8 @@ except Exception as e:
 # ======================================================
 def get_text_embedding(text):
     """รับข้อความแล้วคืนค่า embedding เป็น numpy array"""
-    processor = finetuned_processor if use_finetuned else base_processor
-    model = finetuned_model if use_finetuned else base_model
+    processor = finetuned_processor
+    model = finetuned_model
 
     inputs = processor(text=[text], return_tensors="pt", padding=True)
     with torch.no_grad():
@@ -59,8 +53,8 @@ def get_image_embedding(image_source):
       - bytes หรือ io.BytesIO
     คืนค่า embedding เป็น numpy array
     """
-    processor = finetuned_processor if use_finetuned else base_processor
-    model = finetuned_model if use_finetuned else base_model
+    processor = finetuned_processor
+    model = finetuned_model
 
     if hasattr(image_source, "file"):  # UploadFile
         image_bytes = image_source.file.read()
