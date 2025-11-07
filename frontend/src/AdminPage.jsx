@@ -8,6 +8,7 @@ import { FaUsers } from "react-icons/fa";
 import { CiViewList } from "react-icons/ci";
 import { TbMessageReport } from "react-icons/tb";
 import { LuNotepadText } from "react-icons/lu";
+import { API_URL } from "./configurl"; 
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("users");
