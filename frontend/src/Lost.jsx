@@ -14,7 +14,8 @@ const Lost = ({ currentUserId }) => {
   const [reportComment, setReportComment] = useState("");  
   const [submitting, setSubmitting] = useState(false); 
   const [reportError, setReportError] = useState(""); 
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false); // state popup success
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [showLoginPopup, setShowLoginPopup] = useState(false); // popup login
 
   const navigate = useNavigate();
   const textareaRef = useRef(null);
@@ -52,11 +53,11 @@ const Lost = ({ currentUserId }) => {
 
         if (!isMounted) return;
 
-        const filteredItems = currentUserId
+        const filtered = currentUserId
           ? data.filter((item) => item.user_id !== currentUserId)
           : data;
 
-        setItems(filteredItems);
+        setItems(filtered);
       } catch (error) {
         console.error("Error fetching lost items:", error);
       } finally {
@@ -71,6 +72,11 @@ const Lost = ({ currentUserId }) => {
   }, [currentUserId]);
 
   const handleChat = async (otherUserId, itemId, ownerUsername, itemImage, itemTitle) => {
+    if (!currentUserId) {
+      setShowLoginPopup(true);
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/chats/get-or-create`, {
         method: "POST",
@@ -90,11 +96,15 @@ const Lost = ({ currentUserId }) => {
       });
     } catch (error) {
       console.error("Error starting chat:", error);
-      alert("Cannot start chat right now.");
+      setShowLoginPopup(true);
     }
   };
 
   const handleReportClick = (item) => {
+    if (!currentUserId) {
+      setShowLoginPopup(true);
+      return;
+    }
     setReportingItem(item);
     setReportComment("");
     setReportError("");
@@ -146,7 +156,6 @@ const Lost = ({ currentUserId }) => {
         throw new Error(errText);
       }
 
-      // แทน alert ด้วย popup
       setShowSuccessPopup(true);
       setReportingItem(null); 
       setReportComment("");
@@ -173,50 +182,37 @@ const Lost = ({ currentUserId }) => {
   return (
     <main className="h-full w-full bg-gray-900 text-white pt-165 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-{/* Header */}
-<div className="sticky top-16 z-40 bg-gray-800 bg-opacity-90 backdrop-blur-md py-4 px-4 sm:px-6 lg:px-8 rounded-b-3xl shadow-lg flex flex-col gap-3">
+        {/* Header */}
+        <div className="sticky top-16 z-40 bg-gray-800 bg-opacity-90 backdrop-blur-md py-4 px-4 sm:px-6 lg:px-8 rounded-b-3xl shadow-lg flex flex-col gap-3">
+          <div className="flex justify-between items-center w-full">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold truncate mb-1">
+                Reported Lost Items
+              </h1>
+            </div>
+            <button
+              onClick={() => setShowActualImage(!showActualImage)}
+              className={`p-2 sm:p-3 rounded-full mt-2 transition-all flex items-center justify-center ${
+                showActualImage ? "bg-green-500" : "bg-yellow-500 hover:bg-yellow-600"
+              }`}
+              title={showActualImage ? "Show Container-Fit" : "Show Actual Image"}
+            >
+              <PiImagesSquareDuotone className="h-4 w-4 sm:h-5 sm:w-5" />
+            </button>
+          </div>
 
-  {/* Title + Toggle */}
-  <div className="flex justify-between items-center w-full">
-    {/* Title */}
-    <div className="flex-1 min-w-0">
-      <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold truncate mb-1">
-        Reported Lost Items
-      </h1>
-    </div>
-
-    {/* Toggle Button */}
-    <button
-      onClick={() => setShowActualImage(!showActualImage)}
-      className={`p-2 sm:p-3 rounded-full mt-2 transition-all flex items-center justify-center ${
-        showActualImage ? "bg-green-500" : "bg-yellow-500 hover:bg-yellow-600"
-      }`}
-      title={showActualImage ? "Show Container-Fit" : "Show Actual Image"}
-    >
-      <PiImagesSquareDuotone className="h-4 w-4 sm:h-5 sm:w-5" />
-    </button>
-  </div>
-
-  {/* Search (อยู่ล่างสุดของ Header, ตรงกลาง) */}
-  <div className="w-full flex justify-center">
-    <div className="flex items-center justify-center bg-gray-800 border border-gray-700 rounded-lg px-2 focus-within:ring-2 focus-within:ring-blue-500 transition w-full sm:w-1/2 md:w-200">
-      <IoSearchCircleSharp className="text-3xl sm:text-4xl mr-2" />
-      <input
-        type="text"
-        placeholder="Search..."
-        className="px-2 py-2 sm:py-3 bg-transparent text-white text-sm sm:text-ml focus:outline-none w-full"
-        onChange={(e) => handleFilterChange(e.target.value)}
-      />
-    </div>
-  </div>
-
-</div>
-
-
-
-
-
-
+          <div className="w-full flex justify-center">
+            <div className="flex items-center justify-center bg-gray-800 border border-gray-700 rounded-lg px-2 focus-within:ring-2 focus-within:ring-blue-500 transition w-full sm:w-1/2 md:w-200">
+              <IoSearchCircleSharp className="text-3xl sm:text-4xl mr-2" />
+              <input
+                type="text"
+                placeholder="Search..."
+                className="px-2 py-2 sm:py-3 bg-transparent text-white text-sm sm:text-ml focus:outline-none w-full"
+                onChange={(e) => handleFilterChange(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Items Grid */}
         <div className="pt-20">
@@ -237,7 +233,6 @@ const Lost = ({ currentUserId }) => {
                   key={item.id}
                   className="group relative bg-gray-800 border border-gray-700/50 rounded-3xl shadow-lg overflow-hidden hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-1 transition-all duration-300"
                 >
-                  {/* Image */}
                   <div className="relative w-full h-48 overflow-hidden rounded-t-3xl bg-gray-800">
                     <img
                       src={showActualImage ? item.original_image_data : item.image_data}
@@ -251,7 +246,6 @@ const Lost = ({ currentUserId }) => {
                     <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-50"></div>
                   </div>
 
-                  {/* Content */}
                   <div className="p-4 space-y-2">
                     <div className="flex items-start space-x-2">
                       <h2 className="text-lg font-bold text-white leading-tight group-hover:text-blue-400 transition-colors">
@@ -268,7 +262,6 @@ const Lost = ({ currentUserId }) => {
                         </span>
                       </div>
 
-                      {/* Reported by + ปุ่ม Report */}
                       {item.user_id !== currentUserId && (
                         <div className="flex items-center justify-between text-gray-300">
                           <div className="flex items-center space-x-2">
@@ -309,29 +302,27 @@ const Lost = ({ currentUserId }) => {
                     </div>
 
                     {currentUserId && (
-                    <button
-                      onClick={() =>
-                        handleChat(item.user_id, item.id, item.username, item.image_data, item.title)
-                      }
-                      className="w-full py-1.5 rounded-lg font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 transition-all text-sm flex items-center justify-center"
-                    >
-                      <MessageCircle className="inline mr-1 w-4 h-4" />
-                      Chat
-                    </button>
+                      <button
+                        onClick={() =>
+                          handleChat(item.user_id, item.id, item.username, item.image_data, item.title)
+                        }
+                        className="w-full py-1.5 rounded-lg font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 transition-all text-sm flex items-center justify-center"
+                      >
+                        <MessageCircle className="inline mr-1 w-4 h-4" />
+                        Chat
+                      </button>
                     )}
                   </div>
                 </div>
               ))}
             </div>
-          
           )}
         </div>
 
-        {/* ================== Report Popup ================== */}
+        {/* Report Popup */}
         {reportingItem && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="bg-gray-900 rounded-3xl p-6 w-full max-w-md relative">
-              {/* ปุ่มปิด */}
               <button
                 onClick={() => setReportingItem(null)}
                 className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl font-bold"
@@ -351,7 +342,6 @@ const Lost = ({ currentUserId }) => {
                 onChange={(e) => setReportComment(e.target.value)}
               ></textarea>
 
-              {/* แสดงข้อความ error จาก backend ถ้ามี */}
               {reportError && (
                 <p className="text-sm text-rose-400 mb-3">{reportError}</p>
               )}
@@ -368,7 +358,8 @@ const Lost = ({ currentUserId }) => {
             </div>
           </div>
         )}
-            {/* ================== Success Popup ================== */}
+
+        {/* Success Popup */}
         {showSuccessPopup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="bg-green-600 rounded-3xl p-6 max-w-sm w-full text-center">
@@ -384,6 +375,24 @@ const Lost = ({ currentUserId }) => {
             </div>
           </div>
         )}
+
+        {/* Login Popup */}
+        {showLoginPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-yellow-500 rounded-3xl p-6 max-w-sm w-full text-center">
+              <p className="text-black font-semibold text-lg">
+                Please log in to continue ⚠️
+              </p>
+              <button
+                className="mt-4 px-4 py-2 bg-black text-yellow-500 font-semibold rounded-lg hover:bg-gray-800 transition"
+                onClick={() => setShowLoginPopup(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
     </main>
   );
