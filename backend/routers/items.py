@@ -146,7 +146,6 @@ def get_lost_items(
         )
         for i in items
     ]
-
 @router.get("/items/user", response_model=list[schemas.ItemOut])
 def get_my_items(
     current_user: models.User = Depends(get_current_user),  # ✅ ต้อง login
@@ -168,7 +167,6 @@ def get_my_items(
         )
         for i in items
     ]
-
 # ============================
 # Get items by user
 # ============================
