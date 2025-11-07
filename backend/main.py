@@ -14,7 +14,7 @@ app = FastAPI(title="Lost & Found API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://projectlostandfound.netlify.app/","http://localhost:5173","https://erythrismal-daniela-superglottally.ngrok-free.dev"  # frontend domain
+        "https://projectlostandfound.netlify.app/","http://localhost:5173"  # frontend domain
     ],
     allow_credentials=True,      # สำคัญสำหรับ cookie
     allow_methods=["*"],
@@ -32,3 +32,8 @@ app.include_router(chats.router)
 app.include_router(admin.router)
 app.include_router(report.router)
 
+# -----------------------------
+# Endpoint /health สำหรับตรวจสอบ backend
+@app.get("/health")
+def health():
+    return {"status": "ok"}
