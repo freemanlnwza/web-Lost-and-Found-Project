@@ -66,10 +66,10 @@ const AdminPage = () => {
       try {
         // fetch in parallel
         const [usersRes, itemsRes, reportsRes, logsCountRes] = await Promise.all([
-          fetch("http://localhost:8000/admin/users", { credentials: "include" }),
-          fetch("http://localhost:8000/admin/items", { credentials: "include" }),
-          fetch("http://localhost:8000/admin/reports", { credentials: "include" }),
-          fetch("http://localhost:8000/admin/logs/count", { credentials: "include" }),
+          fetch(`${API_URL}/admin/users`, { credentials: "include" }),
+          fetch(`${API_URL}//admin/items`, { credentials: "include" }),
+          fetch(`${API_URL}/admin/reports`, { credentials: "include" }),
+          fetch(`${API_URL}/admin/logs/count`, { credentials: "include" }),
         ]);
 
         if (usersRes.ok) {
@@ -112,25 +112,25 @@ const AdminPage = () => {
       try {
         let res;
         if (activeTab === "users") {
-          res = await fetch("http://localhost:8000/admin/users", {
+          res = await fetch(`${API_URL}/admin/users`, {
             credentials: "include",
           });
           if (!res.ok) throw new Error("Failed to fetch users");
           setUsers(await res.json());
         } else if (activeTab === "items") {
-          res = await fetch("http://localhost:8000/admin/items", {
+          res = await fetch(`${API_URL}/admin/items`, {
             credentials: "include",
           });
           if (!res.ok) throw new Error("Failed to fetch items");
           setItems(await res.json());
         } else if (activeTab === "reports") {
-          res = await fetch("http://localhost:8000/admin/reports", {
+          res = await fetch(`${API_URL}/admin/reports`, {
             credentials: "include",
           });
           if (!res.ok) throw new Error("Failed to fetch reports");
           setReports(await res.json());
         } else if (activeTab === "logs") {
-          res = await fetch("http://localhost:8000/admin/logs", {
+          res = await fetch(`${API_URL}/admin/logs`, {
             credentials: "include",
           });
           if (!res.ok) throw new Error("Failed to fetch logs");
@@ -150,7 +150,7 @@ const AdminPage = () => {
   // --------------------- Logout ---------------------
   const handleLogout = async () => {
     try {
-      const res = await fetch("http://localhost:8000/auth/logout", {
+      const res = await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
@@ -197,7 +197,7 @@ const AdminPage = () => {
     try {
       let res;
       if (confirmData.type === "user") {
-        res = await fetch(`http://localhost:8000/admin/users/${confirmData.id}`, {
+        res = await fetch(`${API_URL}/admin/users/${confirmData.id}`, {
           method: "DELETE",
           credentials: "include",
         });
@@ -208,7 +208,7 @@ const AdminPage = () => {
           throw new Error(txt || "Failed to delete user");
         }
       } else if (confirmData.type === "item") {
-        res = await fetch(`http://localhost:8000/admin/items/${confirmData.id}`, {
+        res = await fetch(`${API_URL}/admin/items/${confirmData.id}`, {
           method: "DELETE",
           credentials: "include",
         });
@@ -219,7 +219,7 @@ const AdminPage = () => {
           throw new Error(txt || "Failed to delete item");
         }
       } else if (confirmData.type === "report") {
-        res = await fetch(`http://localhost:8000/admin/reports/${confirmData.id}`, {
+        res = await fetch(`${API_URL}/admin/reports/${confirmData.id}`, {
           method: "DELETE",
           credentials: "include",
         });
@@ -246,7 +246,7 @@ const AdminPage = () => {
   const [totalLogs, setTotalLogs] = useState(0);
   useEffect(() => {
     const fetchLogCount = async () => {
-      const res = await fetch("http://localhost:8000/admin/logs/count", {
+      const res = await fetch(`${API_URL}/admin/logs/count`, {
         method: "GET",
         credentials: "include",
       });
