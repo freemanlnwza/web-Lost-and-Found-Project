@@ -8,6 +8,12 @@ import os
 device = "cuda" if torch.cuda.is_available() else "cpu"  # ตรวจสอบ device
 
 # ======================================================
+# โหลด base CLIP
+# ======================================================
+base_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32", use_fast=False)
+base_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
+
+# ======================================================
 # โหลด fine-tuned CLIP จาก Hugging Face (private repo)
 # ======================================================
 HF_TOKEN = os.getenv("HF_TOKEN")  # สำหรับ private repo

@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api", tags=["Search"])
 def translate_to_english(text: str):
     """Translate Thai -> English using Hugging Face Inference API"""
     if any('\u0E00' <= ch <= '\u0E7F' for ch in text):
-        url = "https://api-inference.huggingface.co/models/Helsinki-NLP/opus-mt-th-en"
+        url = "https://router.huggingface.co/hf-inference/models/Helsinki-NLP/opus-mt-th-en"
         headers = {"Authorization": f"Bearer {HF_TOKEN}"}
         payload = {"inputs": text}
         response = requests.post(url, headers=headers, json=payload)

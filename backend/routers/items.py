@@ -10,6 +10,7 @@ import models
   # ✅ นำเข้าฟังก์ชันสำหรับ cookie-based auth
 
 router = APIRouter(prefix="/api", tags=["Items"])
+yolo_model = YOLO("best.pt")
 
 # ============================
 # Upload item
@@ -27,11 +28,6 @@ async def upload_item(
     # ตรวจสอบไฟล์ภาพ
     if not image.filename.lower().endswith((".jpg", ".jpeg", ".png")):
         raise HTTPException(status_code=400, detail="File must be an image (jpg, jpeg, png)")
-
-    # ✅ ดึง yolo_model จาก app instance แทนที่จะโหลดใหม่
-    yolo_model = request.app.yolo_model
-    if not yolo_model:
-        raise HTTPException(status_code=503, detail="YOLO model not loaded")
 
     # อ่านภาพต้นฉบับ
     image_bytes = await image.read()
