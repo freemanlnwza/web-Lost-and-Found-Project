@@ -47,7 +47,9 @@ const Lost = ({ currentUserId }) => {
       setItems([]);
 
       try {
-        const res = await fetch(`${API_URL}/api/lost-items`);
+        const res = await fetch(`${API_URL}/api/lost-items`, {
+  credentials: "include", // ✅ ส่ง cookie/session
+});
         if (!res.ok) throw new Error("Failed to fetch lost items");
         const data = await res.json();
 
