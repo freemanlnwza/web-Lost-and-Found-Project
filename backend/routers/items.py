@@ -7,10 +7,24 @@ import crud, schemas, utils
 from crud import encode_image, get_current_user 
 from database import get_db
 import models
+from huggingface_hub import hf_hub_download
+import os
+
   # ✅ นำเข้าฟังก์ชันสำหรับ cookie-based auth
 
 router = APIRouter(prefix="/api", tags=["Items"])
-yolo_model = YOLO("best.pt")
+HF_TOKEN = os.getenv("HF_TOKEN")  # ต้องตั้งค่า token ของ Hugging Face
+repo_id = "freemanlnwza/modelYOLOv8"
+filename = "weights/best.pt"
+
+model_path = hf_hub_download(
+    repo_id=repo_id,
+    filename=filename,
+    token=HF_TOKEN
+)
+
+# โหลด YOLO model
+yolo_model = YOLO(model_path)
 
 # ============================
 # Upload item

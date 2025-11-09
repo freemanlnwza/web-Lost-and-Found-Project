@@ -14,7 +14,7 @@ app = FastAPI(title="Lost & Found API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://projectlostandfounds.netlify.app","http://localhost:5173","https://erythrismal-daniela-superglottally.ngrok-free.dev" , # frontend domain
+        "https://projectlostandfounds.netlify.app","http://localhost:5173","http://localhost:8000"  # frontend domain
     ],
     allow_credentials=True,      # สำคัญสำหรับ cookie
     allow_methods=["*"],
