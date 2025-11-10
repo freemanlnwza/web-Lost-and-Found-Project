@@ -1,7 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from PIL import Image
 import io
-import torch
 import os
 import models, crud
 from crud import get_current_user
@@ -71,6 +70,8 @@ def get_clip_models():
     
     try:
         logger.info("📥 Downloading CLIP model from HuggingFace...")
+        # ✅ Import torch ที่นี่ (lazy load!)
+        import torch
         from transformers import CLIPModel, CLIPProcessor
         
         # ✅ ใช้ token= (ไม่ใช่ use_auth_token=)
@@ -78,7 +79,7 @@ def get_clip_models():
             "freemanlnwza/modelCLIPfine-tuned",
             token=HF_TOKEN,
             trust_remote_code=True,
-            torch_dtype=torch.float32  # ✅ เพิ่ม dtype
+            torch_dtype=torch.float32  # ✅ ใช้ torch ที่ import ข้างบน
         )
         
         _clip_processor = CLIPProcessor.from_pretrained(
@@ -181,6 +182,9 @@ async def detect_frame(
             logger.info("🧠 Generating CLIP embedding...")
             
             try:
+                # ✅ Import torch ที่นี่ (lazy load!)
+                import torch
+                
                 inputs = clip_processor(
                     images=pil_image, 
                     return_tensors="pt"
