@@ -1,8 +1,9 @@
 fastapi==0.121.0
-uvicorn==0.25.0
-numpy==2.3.4
+uvicorn[standard]==0.25.0
+gunicorn==21.2.0
+numpy==1.24.3
+pillow==12.0.0
 pgvector==0.4.1
-Pillow==12.0.0
 psycopg2-binary==2.9.10
 pydantic==2.12.3
 python-dotenv==1.2.1
@@ -10,5 +11,11 @@ bcrypt==4.0.0
 SQLAlchemy==2.0.44
 requests==2.31.0
 email-validator==2.0.0
-torch
-torchvision
+python-multipart==0.0.6
+huggingface-hub==0.16.1
+opencv-python==4.8.1.78
+
+# ✅ เพิ่มเหล่านี้แทน (auto-install torch ถูกต้อง)
+transformers==4.30.0
+open-clip-torch==2.20.0
+ultralytics==8.0.208
