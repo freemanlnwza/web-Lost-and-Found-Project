@@ -360,7 +360,10 @@ def login_user(
         "id": user.id,
         "username": user.username,
         "email": getattr(user, "email", ""),
-        "role": getattr(user, "role", "")
+        "role": getattr(user, "role", ""),
+        "is_verified": user.is_verified,
+        "session_token": token,
+        "session_expires_at": expires_at
     }
 
 # ====================== Logout ======================
