@@ -31,9 +31,3 @@ app.include_router(search.router)
 app.include_router(chats.router)
 app.include_router(admin.router)
 app.include_router(report.router)
-
-# -----------------------------
-# Endpoint /health สำหรับตรวจสอบ backend
-@app.get("/health")
-def health():
-    return {"status": "ok"}
